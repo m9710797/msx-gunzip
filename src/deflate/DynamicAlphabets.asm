@@ -16,8 +16,6 @@ DynamicAlphabets: MACRO
 		ds DynamicAlphabets_MAX_HEADERCODELENGTHS
 	literalLengthDistanceCodeLengths:
 		ds DynamicAlphabets_MAX_LITERALLENGTHCODELENGTHS + DynamicAlphabets_MAX_DISTANCECODELENGTHS
-	headerCodeAlphabet:
-		Alphabet
 	literalLengthAlphabet:
 		Alphabet
 	distanceAlphabet:
@@ -43,7 +41,6 @@ DynamicAlphabets_Construct:
 	call DynamicAlphabets_ConstructHeaderCodeAlphabet
 	pop iy
 	call DynamicAlphabets_ReadLiteralLengthDistanceCodeLengths
-	call DynamicAlphabets_DestructHeaderCodeAlphabet
 	pop hl
 	call DynamicAlphabets_ConstructLiteralLengthAlphabet
 	pop hl
@@ -59,11 +56,11 @@ DynamicAlphabets_ConstructHeaderCodeAlphabet:
 	ld e,ixl
 	ld d,ixh
 	add hl,de
+	ex de,hl	; de = table with symbol lengths
 	ld bc,DynamicAlphabets_MAX_HEADERCODELENGTHS
-	call DynamicAlphabets_GetHeaderCodeAlphabet
-	ex de,hl
-	ld hl,DynamicAlphabets_headerCodeSymbols
-	call Alphabet_Construct
+	ld hl,HeaderCodeTree
+	ld iy,DynamicAlphabets_headerCodeSymbols
+	call generate_huffman
 	pop ix
 	ret
 
@@ -117,20 +114,6 @@ DynamicAlphabets_Destruct:
 	call DynamicAlphabets_GetDistanceAlphabet
 	call Alphabet_Destruct
 	pop ix
-	ret
-
-; ix = this
-DynamicAlphabets_DestructHeaderCodeAlphabet:
-	push ix
-	call DynamicAlphabets_GetHeaderCodeAlphabet
-	call Alphabet_Destruct
-	pop ix
-	ret
-
-; ix = this
-DynamicAlphabets_GetHeaderCodeAlphabet:
-	ld de,DynamicAlphabets.headerCodeAlphabet
-	add ix,de
 	ret
 
 ; ix = this
@@ -219,13 +202,11 @@ DynamicAlphabets_ReadLiteralLengthDistanceCodeLengths:
 	ld a,(ix + DynamicAlphabets.hlit)
 	add a,(ix + DynamicAlphabets.hdist)
 	push ix
-	call DynamicAlphabets_GetHeaderCodeAlphabet
-	call Alphabet_GetRoot
 	ld e,a
 	ld d,2  ; +1 for nested 8-bit loop
-	push ix
-	ex (sp),iy
-	pop ix
+	push iy
+	pop ix  ; ix = reader
+	ld iy,HeaderCodeTree
 	call Reader_PrepareReadBitInline
 	call DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths
 	call Reader_FinishReadBitInline
@@ -334,3 +315,8 @@ DynamicAlphabets_headerCodeSymbols:
 	dw DynamicAlphabets_WriteLength.8, DynamicAlphabets_WriteLength.9, DynamicAlphabets_WriteLength.10, DynamicAlphabets_WriteLength.11
 	dw DynamicAlphabets_WriteLength.12, DynamicAlphabets_WriteLength.13, DynamicAlphabets_WriteLength.14, DynamicAlphabets_WriteLength.15
 	dw DynamicAlphabets_Copy, DynamicAlphabets_FillZero_3, DynamicAlphabets_FillZero_11, System_ThrowException
+
+
+; scratch area: memory can be reused once DynamicAlphabets is created
+HeaderCodeTree:
+	ds 11 * (DynamicAlphabets_MAX_HEADERCODELENGTHS - 1)
