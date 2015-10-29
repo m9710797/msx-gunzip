@@ -3,8 +3,6 @@
 ;
 NullWriter: MACRO
 	super: Writer
-	fileHandle:
-		db 0FFH
 	_size:
 	ENDM
 

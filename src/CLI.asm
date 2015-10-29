@@ -1,53 +1,24 @@
 ;
 ; Command-line interface parser
 ;
-CLI: MACRO
-	archivePath:
-		dw 0
-	outputPath:
-		dw 0
-	quiet:
-		db 0
-	buffer:
-		ds 255
-	_size:
-	ENDM
 
-CLI_class: Class CLI, CLI_template, Heap_main
-CLI_template: CLI
+cli_archivePath:
+	dw 0
+cli_outputPath:
+	dw 0
+cli_quiet:
+	db 0
+cli_buffer:
+	ds 255
 
-; ix = this
-; ix <- this
-; de <- this
-CLI_Construct:
-	call CLI_GetBuffer
+
+ParseCLI: PROC
+	ld de,cli_buffer
 	ld hl,CLI_parametersEnvName
 	ld b,255
 	call DOS_GetEnvironmentItem
-	ld e,ixl
-	ld d,ixh
-	ret
 
-; ix = this
-; ix <- this
-CLI_Destruct:
-	ret
-
-; ix = this
-; de <- buffer
-; Modifies: bc
-CLI_GetBuffer:
-	push ix
-	pop de
-	ld bc,CLI.buffer
-	ex de,hl
-	add hl,bc
-	ex de,hl
-	ret
-
-; ix = this
-CLI_Parse: PROC
-	call CLI_GetBuffer
+	ld de,cli_buffer
 Loop:
 	ld a,(de)
 	and a
@@ -56,19 +27,10 @@ Loop:
 	jr z,Option
 	cp " "
 	jr nz,Path
-	inc de
-	jp Loop
-Option:
-	call CLI_ParseOption
-	jp Loop
-Path:
-	call CLI_ParsePath
-	jp Loop
-	ENDP
+Next:	inc de
+	jr Loop
 
-; de = buffer position
-; ix = this
-CLI_ParseOption: PROC
+Option:
 	inc de
 	ld a,(de)
 	and 11011111B  ; upper-case
@@ -76,48 +38,45 @@ CLI_ParseOption: PROC
 	jr z,OptionQuiet
 	ld hl,CLI_unknownOptionError
 	jp Application_TerminateWithError
+
 OptionQuiet:
-	ld (ix + CLI.quiet),-1
+	ld (cli_quiet),a	; any non-zero value
 	inc de
-	jp Next
-Next:
 	ld a,(de)
 	and a
 	ret z
 	cp " "
-	ret z
+	jr z,Next
 	ld hl,CLI_unknownOptionError
 	jp Application_TerminateWithError
-	ENDP
 
-; de = buffer position
-; ix = this
-CLI_ParsePath: PROC
-	ld a,(ix + CLI.archivePath)
-	or (ix + CLI.archivePath + 1)
-	jp nz,OutputPath
-	ld (ix + CLI.archivePath),e
-	ld (ix + CLI.archivePath + 1),d
-Continue:
+Path:
+	ld hl,(cli_archivePath)
+	ld a,h
+	or l
+	jr nz,OutputPath
+	ld (cli_archivePath),de
+ParsePath:
 	call DOS_ParsePathname
 	ld a,(de)
 	and a
 	ret z
-	ld a,0
+	xor a
 	ld (de),a
-	inc de
-	ret
+	jr Next
+
 OutputPath:
-	ld a,(ix + CLI.outputPath)
-	or (ix + CLI.outputPath + 1)
+	ld hl,(cli_outputPath)
+	ld a,h
+	or l
 	ld hl,CLI_multiplePathsError
 	call nz,Application_TerminateWithError
-	ld (ix + CLI.outputPath),e
-	ld (ix + CLI.outputPath + 1),d
-	jp Continue
+	ld (cli_outputPath),de
+	jp ParsePath
+
 	ENDP
 
-;
+
 CLI_parametersEnvName:
 	db "PARAMETERS",0
 

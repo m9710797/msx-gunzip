@@ -2,8 +2,7 @@
 ; Top-level application program class
 ;
 Application: MACRO
-	cli:
-		dw 0
+	db 0	; need something otherwise heap triggers an exception??
 	_size:
 	ENDM
 
@@ -45,12 +44,6 @@ Application_Abort:
 ; ix <- this
 ; de <- this
 Application_Construct:
-	push ix
-	call CLI_class.New
-	call CLI_Construct
-	pop ix
-	ld (ix + Application.cli),e
-	ld (ix + Application.cli + 1),d
 	ld e,ixl
 	ld d,ixh
 	ret
@@ -58,21 +51,6 @@ Application_Construct:
 ; ix = this
 ; ix <- this
 Application_Destruct:
-	push ix
-	call Application_GetCLI
-	call CLI_Destruct
-	call CLI_class.Delete
-	pop ix
-	ret
-
-; ix = this
-; de <- Command-line interface
-; ix <- Command-line interface
-Application_GetCLI:
-	ld e,(ix + Application.cli)
-	ld d,(ix + Application.cli + 1)
-	ld ixl,e
-	ld ixh,d
 	ret
 
 ; ix = this
@@ -85,10 +63,8 @@ Application_EnterMainLoop:
 ; ix = this
 Application_ParseCLI:
 	push ix
-	call Application_GetCLI
-	call CLI_Parse
-	ld l,(ix + CLI.archivePath)
-	ld h,(ix + CLI.archivePath + 1)
+	call ParseCLI
+	ld hl,(cli_archivePath)
 	ld a,l
 	or h
 	ld hl,Application_usageInstructions
@@ -98,11 +74,7 @@ Application_ParseCLI:
 
 ; ix = this
 Application_Inflate:
-	push ix
-	call Application_GetCLI
-	ld l,(ix + CLI.outputPath)
-	ld h,(ix + CLI.outputPath + 1)
-	pop ix
+	ld hl,(cli_outputPath)
 	ld a,l
 	or h
 	jp z,Application_InflateTest
@@ -182,11 +154,7 @@ Application_PrintInflating:
 	ret nz
 	ld hl,Application_inflatingFile
 	call System_Print
-	push ix
-	call Application_GetCLI
-	ld l,(ix + CLI.archivePath)
-	ld h,(ix + CLI.archivePath + 1)
-	pop ix
+	ld hl,(cli_archivePath)
 	call System_Print
 	ld hl,Application_dotDotDot
 	call System_Print
@@ -198,35 +166,22 @@ Application_PrintTesting:
 	ret nz
 	ld hl,Application_testingFile
 	call System_Print
-	push ix
-	call Application_GetCLI
-	ld l,(ix + CLI.archivePath)
-	ld h,(ix + CLI.archivePath + 1)
-	pop ix
+	ld hl,(cli_archivePath)
 	call System_Print
 	ld hl,Application_dotDotDot
 	call System_Print
 	ret
 
-; ix = this
 ; f <- nz: quiet
 Application_IsQuiet:
-	push ix
-	push de
-	call Application_GetCLI
-	bit 0,(ix + CLI.quiet)
-	pop de
-	pop ix
+	ld a,(cli_quiet)
+	or a
 	ret
 
 ; ix = this
 ; de <- file reader
 Application_CreateFileReader:
-	push ix
-	call Application_GetCLI
-	ld e,(ix + CLI.archivePath)
-	ld d,(ix + CLI.archivePath + 1)
-	pop ix
+	ld de,(cli_archivePath)
 	ld hl,IBUFFER
 	ld bc,IBUFFER_SIZE
 	push ix
@@ -238,11 +193,7 @@ Application_CreateFileReader:
 ; ix = this
 ; de <- file writer
 Application_CreateFileWriter:
-	push ix
-	call Application_GetCLI
-	ld e,(ix + CLI.outputPath)
-	ld d,(ix + CLI.outputPath + 1)
-	pop ix
+	ld de,(cli_outputPath)
 	ld hl,OBUFFER
 	ld bc,OBUFFER_SIZE
 	push ix
