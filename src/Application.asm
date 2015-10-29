@@ -23,7 +23,6 @@ Application_Main:
 
 	call HeapTest_Test
 	call WriterTest_Test
-	call AlphabetTest_Test
 
 	call Application_class.New
 	call Application_Construct
