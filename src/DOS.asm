@@ -234,10 +234,6 @@ DOS_TerminateWithErrorCode:
 	ld c,_TERM
 	jp BDOS
 
-DOS_DefineAbortExitRoutine:
-	ld c,_DEFAB
-	jp BDOS
-
 DOS_ExplainErrorCode:
 	ld c,_EXPLAIN
 	jp BDOS

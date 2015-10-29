@@ -51,12 +51,7 @@ System_Print_Done:
 ; hl = string (0-terminated)
 ; Modifies: none
 System_PrintLn:
-	push hl
 	call System_Print
-	ld hl,System_crlf
-	call System_Print
-	pop hl
-	ret
 
 ; Modifies: none
 System_PrintCrLf:

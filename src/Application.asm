@@ -1,93 +1,65 @@
 ;
 ; Top-level application program class
 ;
-Application: MACRO
-	db 0	; need something otherwise heap triggers an exception??
-	_size:
-	ENDM
 
-Application_class: Class Application, Application_template, Heap_main
-Application_template: Application
-
-;
 Application_Main:
 	call DOS_IsDOS2
 	ld hl,Application_dos2RequiredError
-	call c,Application_TerminateWithError
+	jp c,Application_TerminateWithError
 
-	call Application_CheckStack
+	; Check if the stack is well above the heap
+	ld hl,-(HEAP + HEAP_SIZE + STACK_SIZE)
+	add hl,sp
+	ld hl,Application_insufficientTPAError
+	jp nc,Application_TerminateWithError
 
 	ld ix,Heap_main
 	call Heap_Construct
 
-	call Application_class.New
-	call Application_Construct
-	ld (Application_instance),ix
-	ld de,Application_Abort
-	call DOS_DefineAbortExitRoutine
-	call Application_EnterMainLoop
-	call Application_Abort
-	ret
-
-; DOS error or abort handler
-Application_Abort:
-	push af
-	push bc
-	ld ix,(Application_instance)
-	call Application_Destruct
-	call Application_class.Delete
-	pop bc
-	pop af
-	ret
-
-; ix = this
-; ix <- this
-; de <- this
-Application_Construct:
-	ld e,ixl
-	ld d,ixh
-	ret
-
-; ix = this
-; ix <- this
-Application_Destruct:
-	ret
-
-; ix = this
-Application_EnterMainLoop:
-	call Application_ParseCLI
-	call Application_PrintWelcome
-	call Application_Inflate
-	ret
-
-; ix = this
-Application_ParseCLI:
-	push ix
+	; Parse CLI
 	call ParseCLI
 	ld hl,(cli_archivePath)
 	ld a,l
 	or h
 	ld hl,Application_usageInstructions
-	call z,Application_TerminateWithError
-	pop ix
-	ret
+	jp z,Application_TerminateWithError
 
-; ix = this
-Application_Inflate:
+	; Print Welcome
+	call Application_IsQuiet
+	ld hl,Application_welcome
+	call z,System_Print
+
+	; Print inflating/testing
+	call Application_IsQuiet
+	jr nz,skip_print
 	ld hl,(cli_outputPath)
 	ld a,l
 	or h
-	jp z,Application_InflateTest
-	jp Application_InflateToFile
+	ld hl,Application_testingFile
+	jr z,do_print
+	ld hl,Application_inflatingFile
+do_print:
+	call System_Print
+	ld hl,(cli_archivePath)
+	call System_Print
+	ld hl,Application_dotDotDot
+	call System_Print
+skip_print:
 
-; ix = this
-Application_InflateToFile:
-	call Application_PrintInflating
-	call Application_CreateFileReader
+	; Create FileReader
+	ld de,(cli_archivePath)
+	ld hl,IBUFFER
+	ld bc,IBUFFER_SIZE
+	call FileReader_class.New
+	call FileReader_Construct
 	push de
+	
+	ld hl,(cli_outputPath)
+	ld a,l
+	or h
+	jr z,Application_InflateTest
 	call Application_CreateFileWriter
 	pop hl
-	push ix
 	push hl
 	push de
 	call Archive_class.New
@@ -106,18 +78,11 @@ Application_InflateToFile:
 	ld ixl,e
 	ld ixh,d
 	call FileReader_Destruct
-	call FileReader_class.Delete
-	pop ix
-	ret
+	jp FileReader_class.Delete
 
-; ix = this
 Application_InflateTest:
-	call Application_PrintTesting
-	call Application_CreateFileReader
-	push de
 	call Application_CreateNullWriter
 	pop hl
-	push ix
 	push hl
 	push de
 	call Archive_class.New
@@ -136,41 +101,8 @@ Application_InflateTest:
 	ld ixl,e
 	ld ixh,d
 	call FileReader_Destruct
-	call FileReader_class.Delete
-	pop ix
-	ret
+	jp FileReader_class.Delete
 
-; ix = this
-Application_PrintWelcome:
-	call Application_IsQuiet
-	ret nz
-	ld hl,Application_welcome
-	call System_Print
-	ret
-
-; ix = this
-Application_PrintInflating:
-	call Application_IsQuiet
-	ret nz
-	ld hl,Application_inflatingFile
-	call System_Print
-	ld hl,(cli_archivePath)
-	call System_Print
-	ld hl,Application_dotDotDot
-	call System_Print
-	ret
-
-; ix = this
-Application_PrintTesting:
-	call Application_IsQuiet
-	ret nz
-	ld hl,Application_testingFile
-	call System_Print
-	ld hl,(cli_archivePath)
-	call System_Print
-	ld hl,Application_dotDotDot
-	call System_Print
-	ret
 
 ; f <- nz: quiet
 Application_IsQuiet:
@@ -178,48 +110,23 @@ Application_IsQuiet:
 	or a
 	ret
 
-; ix = this
 ; de <- file reader
-Application_CreateFileReader:
-	ld de,(cli_archivePath)
-	ld hl,IBUFFER
-	ld bc,IBUFFER_SIZE
-	push ix
-	call FileReader_class.New
-	call FileReader_Construct
-	pop ix
-	ret
 
-; ix = this
 ; de <- file writer
 Application_CreateFileWriter:
 	ld de,(cli_outputPath)
 	ld hl,OBUFFER
 	ld bc,OBUFFER_SIZE
-	push ix
 	call FileWriter_class.New
-	call FileWriter_Construct
-	pop ix
-	ret
+	jp FileWriter_Construct
 
-; ix = this
 ; de <- file writer
 Application_CreateNullWriter:
 	ld hl,OBUFFER
 	ld bc,OBUFFER_SIZE
-	push ix
 	call NullWriter_class.New
-	call NullWriter_Construct
-	pop ix
-	ret
+	jp NullWriter_Construct
 
-; Check if the stack is well above the heap
-Application_CheckStack:
-	ld hl,-(HEAP + HEAP_SIZE + STACK_SIZE)
-	add hl,sp
-	ld hl,Application_insufficientTPAError
-	call nc,Application_TerminateWithError
-	ret
 
 ; a <- DOS error code
 Application_CheckDOSError:
@@ -230,8 +137,7 @@ Application_TerminateWithDOSError:
 	ld de,Application_explainBuffer
 	call DOS_ExplainErrorCode
 	ld hl,Application_explainBuffer
-	call System_Print
-	call System_PrintCrLf
+	call System_PrintLn
 	jp DOS_Terminate
 
 ; hl <- message
@@ -267,9 +173,6 @@ Application_usageInstructions:
 	db "If no output file is specified, the archive will be tested.",13,10,0
 
 	SECTION RAM
-
-Application_instance:
-	dw 0
 
 Application_explainBuffer:
 	ds 64,0
