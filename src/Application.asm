@@ -25,12 +25,14 @@ Application_Main:
 	jp z,Application_TerminateWithError
 
 	; Print Welcome
-	call Application_IsQuiet
+	ld a,(cli_quiet)
+	or a
 	ld hl,Application_welcome
 	call z,System_Print
 
 	; Print inflating/testing
-	call Application_IsQuiet
+	ld a,(cli_quiet)
+	or a
 	jr nz,skip_print
 	ld hl,(cli_outputPath)
 	ld a,l
@@ -54,11 +56,13 @@ skip_print:
 	call FileReader_Construct
 	push de
 	
-	ld hl,(cli_outputPath)
-	ld a,l
-	or h
-	jr z,Application_InflateTest
-	call Application_CreateFileWriter
+	; Create FileWriter
+	ld de,(cli_outputPath)
+	ld hl,OBUFFER
+	ld bc,OBUFFER_SIZE
+	call FileWriter_class.New
+	call FileWriter_Construct
+
 	pop hl
 	push hl
 	push de
@@ -79,53 +83,6 @@ skip_print:
 	ld ixh,d
 	call FileReader_Destruct
 	jp FileReader_class.Delete
-
-Application_InflateTest:
-	call Application_CreateNullWriter
-	pop hl
-	push hl
-	push de
-	call Archive_class.New
-	call Archive_Construct
-
-	call Archive_Extract
-
-	call Archive_Destruct
-	call Archive_class.Delete
-	pop de
-	ld ixl,e
-	ld ixh,d
-	call NullWriter_Destruct
-	call NullWriter_class.Delete
-	pop de
-	ld ixl,e
-	ld ixh,d
-	call FileReader_Destruct
-	jp FileReader_class.Delete
-
-
-; f <- nz: quiet
-Application_IsQuiet:
-	ld a,(cli_quiet)
-	or a
-	ret
-
-; de <- file reader
-
-; de <- file writer
-Application_CreateFileWriter:
-	ld de,(cli_outputPath)
-	ld hl,OBUFFER
-	ld bc,OBUFFER_SIZE
-	call FileWriter_class.New
-	jp FileWriter_Construct
-
-; de <- file writer
-Application_CreateNullWriter:
-	ld hl,OBUFFER
-	ld bc,OBUFFER_SIZE
-	call NullWriter_class.New
-	jp NullWriter_Construct
 
 
 ; a <- DOS error code
