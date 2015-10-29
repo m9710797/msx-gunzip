@@ -6,6 +6,8 @@ DynamicAlphabets_MAX_LITERALLENGTHCODELENGTHS: equ 286
 DynamicAlphabets_MAX_DISTANCECODELENGTHS: equ 30
 
 DynamicAlphabets: MACRO
+	; TODO these are only used during the constructor, these should be
+	;      local (or scratch) instead of member variables
 	hlit:
 		db 0  ; we only store the LSB, MSB is always 1
 	hdist:
@@ -16,10 +18,6 @@ DynamicAlphabets: MACRO
 		ds DynamicAlphabets_MAX_HEADERCODELENGTHS
 	literalLengthDistanceCodeLengths:
 		ds DynamicAlphabets_MAX_LITERALLENGTHCODELENGTHS + DynamicAlphabets_MAX_DISTANCECODELENGTHS
-	literalLengthAlphabet:
-		Alphabet
-	distanceAlphabet:
-		Alphabet
 	_size:
 	ENDM
 
@@ -52,15 +50,16 @@ DynamicAlphabets_Construct:
 ; ix = this
 DynamicAlphabets_ConstructHeaderCodeAlphabet:
 	push ix
-	ld hl,DynamicAlphabets.headerCodeLengths
-	ld e,ixl
-	ld d,ixh
-	add hl,de
-	ex de,hl	; de = table with symbol lengths
+
 	ld bc,DynamicAlphabets_MAX_HEADERCODELENGTHS
+	ld de,DynamicAlphabets.headerCodeLengths
+	add ix,de
+	ld e,ixl
+	ld d,ixh	; de = length of symbols
 	ld hl,HeaderCodeTree
 	ld iy,DynamicAlphabets_headerCodeSymbols
 	call generate_huffman
+
 	pop ix
 	ret
 
@@ -69,81 +68,46 @@ DynamicAlphabets_ConstructHeaderCodeAlphabet:
 DynamicAlphabets_ConstructLiteralLengthAlphabet:
 	push ix
 	push hl
-	ld hl,DynamicAlphabets.literalLengthDistanceCodeLengths
-	ld e,ixl
-	ld d,ixh
-	add hl,de
+
 	ld c,(ix + DynamicAlphabets.hlit)
-	ld b,1
-	call DynamicAlphabets_GetLiteralLengthAlphabet
-	ex de,hl
-	pop hl
-	call Alphabet_Construct
+	ld b,1	; bc = number of symbols
+	ld de,DynamicAlphabets.literalLengthDistanceCodeLengths
+	add ix,de
+	ld e,ixl
+	ld d,ixh	; de = length of symbols
+	ld hl,LiteralTree
+	pop iy	; iy = literal/length symbol handlers table
+	call generate_huffman
+
 	pop ix
 	ret
+
 
 ; hl = distance symbol handlers table
 ; ix = this
 DynamicAlphabets_ConstructDistanceAlphabet:
 	push ix
 	push hl
-	ld hl,DynamicAlphabets.literalLengthDistanceCodeLengths
-	ld e,ixl
-	ld d,ixh
-	add hl,de
+
+	ld c,(ix + DynamicAlphabets.hdist)
+	ld b,0	; bc = number of symbols
 	ld e,(ix + DynamicAlphabets.hlit)
 	ld d,1
-	add hl,de
-	ld c,(ix + DynamicAlphabets.hdist)
-	ld b,0
-	call DynamicAlphabets_GetDistanceAlphabet
-	ex de,hl
-	pop hl
-	call Alphabet_Construct
+	add ix,de
+	ld de,DynamicAlphabets.literalLengthDistanceCodeLengths
+	add ix,de
+	ld e,ixl
+	ld d,ixh	; de = length of symbols
+	ld hl,DistanceTree
+	pop iy	; iy = distance symbol handlers table
+	call generate_huffman
+
 	pop ix
 	ret
 
 ; ix = this
 ; ix <- this
 DynamicAlphabets_Destruct:
-	push ix
-	call DynamicAlphabets_GetLiteralLengthAlphabet
-	call Alphabet_Destruct
-	pop ix
-	push ix
-	call DynamicAlphabets_GetDistanceAlphabet
-	call Alphabet_Destruct
-	pop ix
-	ret
-
-; ix = this
-DynamicAlphabets_GetLiteralLengthAlphabet:
-	ld de,DynamicAlphabets.literalLengthAlphabet
-	add ix,de
-	ret
-
-; ix = this
-DynamicAlphabets_GetDistanceAlphabet:
-	ld de,DynamicAlphabets.distanceAlphabet
-	add ix,de
-	ret
-
-; ix = this
-; hl <- literal/length alphabet root
-; de <- distance alphabet root
-DynamicAlphabets_GetRoots:
-	push ix
-	call DynamicAlphabets_GetDistanceAlphabet
-	ld e,(ix + Alphabet.root)
-	ld d,(ix + Alphabet.root + 1)
-	pop ix
-	push de
-	push ix
-	call DynamicAlphabets_GetLiteralLengthAlphabet
-	ld l,(ix + Alphabet.root)
-	ld h,(ix + Alphabet.root + 1)
-	pop ix
-	pop de
 	ret
 
 ; ix = this

@@ -132,18 +132,26 @@ Loop:
 ; ix = this
 Inflate_InflateFixedCompressed:
 	push ix
-	call FixedAlphabets_class.New
-	ld hl,Inflate_literalLengthSymbols
-	ld de,Inflate_distanceSymbols
-	call FixedAlphabets_Construct
-	call FixedAlphabets_GetRoots
+
+	ld bc,FixedAlphabets_literalLengthCodeLengthsCount
+	ld de,FixedAlphabets_literalLengthCodeLengths
+	ld hl,LiteralTree
+	ld iy,Inflate_literalLengthSymbols
+	call generate_huffman
+
+	ld bc,FixedAlphabets_distanceCodeLengthsCount
+	ld de,FixedAlphabets_distanceCodeLengths
+	ld hl,DistanceTree
+	ld iy,Inflate_distanceSymbols
+	call generate_huffman
+
+	ld hl,LiteralTree
+	ld de,DistanceTree
 	ex (sp),ix
 
 	call Inflate_InflateCompressed
 
 	ex (sp),ix
-	call FixedAlphabets_Destruct
-	call FixedAlphabets_class.Delete
 	pop ix
 	ret
 
@@ -155,7 +163,8 @@ Inflate_InflateDynamicCompressed:
 	ld hl,Inflate_literalLengthSymbols
 	ld de,Inflate_distanceSymbols
 	call DynamicAlphabets_Construct
-	call DynamicAlphabets_GetRoots
+	ld hl,LiteralTree
+	ld de,DistanceTree
 	ex (sp),ix
 
 	call Inflate_InflateCompressed
@@ -903,3 +912,9 @@ out_ptr:	dw 0
 
 	ALIGN 256
 scratch_buf:	ds 32
+
+
+LiteralTree:
+	ds 11 * (288 - 1)
+DistanceTree:
+	ds 11 * (32 - 1)
