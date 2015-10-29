@@ -49,6 +49,11 @@ ConstructDynamicAlphabets: PROC
 	call nc,System_ThrowException
 
 	; Read header code lengths
+	ld hl,headerCodeLengths
+	ld de,headerCodeLengths + 1
+	ld bc,DynamicAlphabets_MAX_HEADERCODELENGTHS - 1
+	ld (hl),b ; 0
+	ldir
 	ld b,a	; hclen
 	ld hl,DynamicAlphabets_headerCodeOrder
 Loop:
