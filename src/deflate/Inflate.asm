@@ -144,41 +144,17 @@ Inflate_InflateFixedCompressed:
 	ld hl,DistanceTree
 	ld iy,Inflate_distanceSymbols
 	call generate_huffman
-
-	ld hl,LiteralTree
-	ld de,DistanceTree
-	ex (sp),ix
-
-	call Inflate_InflateCompressed
-
-	ex (sp),ix
-	pop ix
-	ret
+	jr Inflate_DoInflate
 
 ; ix = this
 Inflate_InflateDynamicCompressed:
 	push ix
 	call Inflate_GetReaderIY
-	call DynamicAlphabets_class.New
-	ld hl,Inflate_literalLengthSymbols
-	ld de,Inflate_distanceSymbols
-	call DynamicAlphabets_Construct
+	call ConstructDynamicAlphabets
+Inflate_DoInflate:
 	ld hl,LiteralTree
 	ld de,DistanceTree
-	ex (sp),ix
-
-	call Inflate_InflateCompressed
-
-	ex (sp),ix
-	call DynamicAlphabets_Destruct
-	call DynamicAlphabets_class.Delete
 	pop ix
-	ret
-
-; hl = literal/length alphabet root
-; de = distance alphabet root
-; ix = this
-Inflate_InflateCompressed:
 	push ix
 	ld c,(ix + Inflate.writer)
 	ld b,(ix + Inflate.writer + 1)

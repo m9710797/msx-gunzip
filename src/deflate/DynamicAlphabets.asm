@@ -5,177 +5,107 @@ DynamicAlphabets_MAX_HEADERCODELENGTHS: equ 19
 DynamicAlphabets_MAX_LITERALLENGTHCODELENGTHS: equ 286
 DynamicAlphabets_MAX_DISTANCECODELENGTHS: equ 30
 
-DynamicAlphabets: MACRO
-	; TODO these are only used during the constructor, these should be
-	;      local (or scratch) instead of member variables
-	hlit:
-		db 0  ; we only store the LSB, MSB is always 1
-	hdist:
-		db 0
-	hclen:
-		db 0
-	headerCodeLengths:
-		ds DynamicAlphabets_MAX_HEADERCODELENGTHS
-	literalLengthDistanceCodeLengths:
-		ds DynamicAlphabets_MAX_LITERALLENGTHCODELENGTHS + DynamicAlphabets_MAX_DISTANCECODELENGTHS
-	_size:
-	ENDM
+; Strictly speaking we only need to store the LSB of the following two values.
+; But also storing the MSB allows for simpler code, so the space overhead here
+; is more than made up in smaller code size.
+hlit:	dw 256	; MSB fixed at '1'
+hdist:	dw 0	; MSB fixed at '0'
 
-DynamicAlphabets_class: Class DynamicAlphabets, DynamicAlphabets_template, Heap_main
-DynamicAlphabets_template: DynamicAlphabets
+; Overlap 'headerCodeLengths' and 'literalLengthDistanceCodeLengths', they are
+; not simultaneously life.
+;   TODO Does 'glass' have a union feature?
+; These are scratch buffers, they can be reused outside ConstructDynamicAlphabets
+headerCodeLengths:
+	; ds DynamicAlphabets_MAX_HEADERCODELENGTHS  ; the shorter of the two
+literalLengthDistanceCodeLengths:
+	ds DynamicAlphabets_MAX_LITERALLENGTHCODELENGTHS + DynamicAlphabets_MAX_DISTANCECODELENGTHS
+HeaderCodeTree:
+	ds 11 * (DynamicAlphabets_MAX_HEADERCODELENGTHS - 1)
 
-; hl = literal/length symbol handlers table
-; de = distance symbol handlers table
-; ix = this
+
 ; iy = reader
-; ix <- this
-; de <- this
-DynamicAlphabets_Construct:
-	push de
-	push hl
-	call DynamicAlphabets_ReadLengths
-	call DynamicAlphabets_ReadHeaderCodeLengths
-	push iy
-	call DynamicAlphabets_ConstructHeaderCodeAlphabet
-	pop iy
-	call DynamicAlphabets_ReadLiteralLengthDistanceCodeLengths
-	pop hl
-	call DynamicAlphabets_ConstructLiteralLengthAlphabet
-	pop hl
-	call DynamicAlphabets_ConstructDistanceAlphabet
-	ld e,ixl
-	ld d,ixh
-	ret
-
-; ix = this
-DynamicAlphabets_ConstructHeaderCodeAlphabet:
-	push ix
-
-	ld bc,DynamicAlphabets_MAX_HEADERCODELENGTHS
-	ld de,DynamicAlphabets.headerCodeLengths
-	add ix,de
-	ld e,ixl
-	ld d,ixh	; de = length of symbols
-	ld hl,HeaderCodeTree
-	ld iy,DynamicAlphabets_headerCodeSymbols
-	call generate_huffman
-
-	pop ix
-	ret
-
-; hl = literal/length symbol handlers table
-; ix = this
-DynamicAlphabets_ConstructLiteralLengthAlphabet:
-	push ix
-	push hl
-
-	ld c,(ix + DynamicAlphabets.hlit)
-	ld b,1	; bc = number of symbols
-	ld de,DynamicAlphabets.literalLengthDistanceCodeLengths
-	add ix,de
-	ld e,ixl
-	ld d,ixh	; de = length of symbols
-	ld hl,LiteralTree
-	pop iy	; iy = literal/length symbol handlers table
-	call generate_huffman
-
-	pop ix
-	ret
-
-
-; hl = distance symbol handlers table
-; ix = this
-DynamicAlphabets_ConstructDistanceAlphabet:
-	push ix
-	push hl
-
-	ld c,(ix + DynamicAlphabets.hdist)
-	ld b,0	; bc = number of symbols
-	ld e,(ix + DynamicAlphabets.hlit)
-	ld d,1
-	add ix,de
-	ld de,DynamicAlphabets.literalLengthDistanceCodeLengths
-	add ix,de
-	ld e,ixl
-	ld d,ixh	; de = length of symbols
-	ld hl,DistanceTree
-	pop iy	; iy = distance symbol handlers table
-	call generate_huffman
-
-	pop ix
-	ret
-
-; ix = this
-; ix <- this
-DynamicAlphabets_Destruct:
-	ret
-
-; ix = this
-; iy = reader
-DynamicAlphabets_ReadLengths:
+ConstructDynamicAlphabets: PROC
+	; Read hlit
 	ld b,5
 	call Reader_ReadBits_IY
 	inc a
 	cp (DynamicAlphabets_MAX_LITERALLENGTHCODELENGTHS & 0FFH) + 1
 	call nc,System_ThrowException
-	ld (ix + DynamicAlphabets.hlit),a
+	ld (hlit),a
+
+	; Read hdist
 	ld b,5
 	call Reader_ReadBits_IY
 	inc a
 	cp DynamicAlphabets_MAX_DISTANCECODELENGTHS + 1
 	call nc,System_ThrowException
-	ld (ix + DynamicAlphabets.hdist),a
+	ld (hdist),a
+
+	; Read hclen
 	ld b,4
 	call Reader_ReadBits_IY
 	add a,4
 	cp DynamicAlphabets_MAX_HEADERCODELENGTHS + 1
 	call nc,System_ThrowException
-	ld (ix + DynamicAlphabets.hclen),a
-	ret
 
-; ix = this
-; iy = reader
-DynamicAlphabets_ReadHeaderCodeLengths: PROC
-	ld b,(ix + DynamicAlphabets.hclen)
+	; Read header code lengths
+	ld b,a	; hclen
 	ld hl,DynamicAlphabets_headerCodeOrder
 Loop:
 	ld e,(hl)
 	ld d,0
 	inc hl
 	push hl
-	push ix
-	add ix,de
+	ld hl,headerCodeLengths
+	add hl,de
 	push bc
 	ld b,3
 	call Reader_ReadBits_IY
 	pop bc
-	ld (ix + DynamicAlphabets.headerCodeLengths),a
-	pop ix
+	ld (hl),a
 	pop hl
 	djnz Loop
-	ret
-	ENDP
 
-; ix = this
-; iy = reader
-DynamicAlphabets_ReadLiteralLengthDistanceCodeLengths:
-	ld hl,DynamicAlphabets.literalLengthDistanceCodeLengths
-	ld e,ixl
-	ld d,ixh
-	add hl,de
-	ld a,(ix + DynamicAlphabets.hlit)
-	add a,(ix + DynamicAlphabets.hdist)
-	push ix
-	ld e,a
-	ld d,2  ; +1 for nested 8-bit loop
+	; Construct header code alphabet
 	push iy
-	pop ix  ; ix = reader
+	ld bc,DynamicAlphabets_MAX_HEADERCODELENGTHS
+	ld de,headerCodeLengths ; de = length of symbols
+	ld hl,HeaderCodeTree
+	ld iy,DynamicAlphabets_headerCodeSymbols
+	call generate_huffman
+
+	; Read literal length distance code lengths
+	ld hl,literalLengthDistanceCodeLengths
+	ld a,(hdist) ; LSB
+	ld de,(hlit)
+	add a,e	; cannot overflow
+	ld e,a
+	inc d	; +1 for nested 8-bit loop
+	pop ix	; ix = reader
 	ld iy,HeaderCodeTree
 	call Reader_PrepareReadBitInline
 	call DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths
 	call Reader_FinishReadBitInline
-	pop ix
-	ret
+
+	; Construct literal length alphabet
+	ld bc,(hlit) ; bc = number of symbols
+	ld de,literalLengthDistanceCodeLengths ; de = length of symbols
+	ld hl,LiteralTree
+	ld iy,Inflate_literalLengthSymbols	; iy = literal/length symbol handlers table
+	call generate_huffman
+
+	; Construct distance alphabet
+	ld bc,(hdist) ; bc = number of symbols
+	ld hl,literalLengthDistanceCodeLengths
+	ld de,(hlit)
+	add hl,de
+	ex de,hl	; de = length of symbols
+	ld hl,DistanceTree
+	ld iy,Inflate_distanceSymbols	; iy = distance symbol handlers table
+	jp generate_huffman
+
+	ENDP
+
 
 ; c = inline bit reader state
 ; de = loop counter for nested 8-bit loop
@@ -279,8 +209,3 @@ DynamicAlphabets_headerCodeSymbols:
 	dw DynamicAlphabets_WriteLength.8, DynamicAlphabets_WriteLength.9, DynamicAlphabets_WriteLength.10, DynamicAlphabets_WriteLength.11
 	dw DynamicAlphabets_WriteLength.12, DynamicAlphabets_WriteLength.13, DynamicAlphabets_WriteLength.14, DynamicAlphabets_WriteLength.15
 	dw DynamicAlphabets_Copy, DynamicAlphabets_FillZero_3, DynamicAlphabets_FillZero_11, System_ThrowException
-
-
-; scratch area: memory can be reused once DynamicAlphabets is created
-HeaderCodeTree:
-	ds 11 * (DynamicAlphabets_MAX_HEADERCODELENGTHS - 1)
