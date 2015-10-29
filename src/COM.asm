@@ -15,7 +15,7 @@ OBUFFER_SIZE: equ 8000H
 HEAP_SIZE: equ 0400H
 STACK_SIZE: equ 100H
 
-TPA: ds 3600H
+TPA: ds 3400H
 RAM: ds 0100H
 IBUFFER: ds VIRTUAL IBUFFER_SIZE
 OBUFFER: ds VIRTUAL OBUFFER_SIZE
@@ -33,20 +33,15 @@ COM_Main:
 	INCLUDE "BIOS.asm"
 	INCLUDE "System.asm"
 	INCLUDE "Heap.asm"
-	INCLUDE "HeapTest.asm"
 	INCLUDE "Class.asm"
 	INCLUDE "Application.asm"
 	INCLUDE "CLI.asm"
 	INCLUDE "Archive.asm"
 	INCLUDE "deflate/Inflate.asm"
-	INCLUDE "deflate/Alphabet.asm"
-	INCLUDE "deflate/AlphabetTest.asm"
-	INCLUDE "deflate/Branch.asm"
 	INCLUDE "deflate/FixedAlphabets.asm"
 	INCLUDE "deflate/DynamicAlphabets.asm"
 	INCLUDE "deflate/Reader.asm"
 	INCLUDE "deflate/Writer.asm"
-	INCLUDE "deflate/WriterTest.asm"
 	INCLUDE "FileReader.asm"
 	INCLUDE "FileWriter.asm"
 	INCLUDE "NullWriter.asm"

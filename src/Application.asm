@@ -21,9 +21,6 @@ Application_Main:
 	ld ix,Heap_main
 	call Heap_Construct
 
-	call HeapTest_Test
-	call WriterTest_Test
-
 	call Application_class.New
 	call Application_Construct
 	ld (Application_instance),ix
