@@ -23,9 +23,9 @@ HeaderCodeTree:
 	ds 11 * (DynamicAlphabets_MAX_HEADERCODELENGTHS - 1)
 
 
-; iy = reader
 ConstructDynamicAlphabets: PROC
 	; Read hlit
+	ld iy,ReaderObject
 	ld b,5
 	call Reader_ReadBits_IY
 	inc a

@@ -9,16 +9,16 @@ Inflate_Inflate:
 	call Reader_ReadBits
 	call Inflate_InflateBlock
 	pop af
-	jp nc,Inflate_Inflate
+	jr nc,Inflate_Inflate
 	ret
 
 ; a = block type
 Inflate_InflateBlock:
 	and a
-	jp z,Inflate_InflateUncompressed
+	jr z,Inflate_InflateUncompressed
 	cp 2
-	jp c,Inflate_InflateFixedCompressed
-	jp z,Inflate_InflateDynamicCompressed
+	jr c,Inflate_InflateFixedCompressed
+	jr z,Inflate_InflateDynamicCompressed
 	ld hl,Inflate_invalidBlockTypeError
 	jp Application_TerminateWithError
 
@@ -44,14 +44,12 @@ Inflate_InflateUncompressed: PROC
 	dec de
 	inc d
 	ld c,d
-	ld ix,ReaderObject ; TODO remove ??
 	ld iy,WriterObject
-Loop:
-	call Reader_Read
+Loop:	call Reader_Read
 	call Writer_Write_IY
 	djnz Loop
 	dec c
-	jp nz,Loop
+	jr nz,Loop
 	ret
 	ENDP
 
@@ -70,7 +68,6 @@ Inflate_InflateFixedCompressed:
 	jr Inflate_DoInflate
 
 Inflate_InflateDynamicCompressed:
-	ld iy,ReaderObject
 	call ConstructDynamicAlphabets
 Inflate_DoInflate:
 	ld hl,LiteralTree
@@ -79,8 +76,7 @@ Inflate_DoInflate:
 	ld iy,WriterObject
 	call Reader_PrepareReadBitInline
 	call Inflate_DecodeLiteralLength
-	call Reader_FinishReadBitInline
-	ret
+	jp Reader_FinishReadBitInline
 
 ; c = inline bit reader state
 ; hl = literal/length alphabet root
