@@ -793,16 +793,6 @@ next_symbol:
 	jp nz,symbol_loop
 	ret
 
-
 root:		dw 0
 length_ptr:	dw 0
 out_ptr:	dw 0
-
-	ALIGN 256
-scratch_buf:	ds 32
-
-
-LiteralTree:
-	ds 11 * (288 - 1)
-DistanceTree:
-	ds 11 * (32 - 1)

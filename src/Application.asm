@@ -65,9 +65,9 @@ Application_CheckDOSError:
 	ret z
 Application_TerminateWithDOSError:
 	ld b,a
-	ld de,Application_explainBuffer
+	ld de,scratch_buf
 	call DOS_ExplainErrorCode
-	ld hl,Application_explainBuffer
+	ld hl,scratch_buf
 	call System_PrintLn
 	jp DOS_Terminate
 
@@ -102,10 +102,3 @@ Application_usageInstructions:
 	db "  /q  Quiet mode, suppress messages.",13,10
 	db 13,10
 	db "If no output file is specified, the archive will be tested.",13,10,0
-
-	SECTION RAM
-
-Application_explainBuffer:
-	ds 64,0
-
-	ENDS
