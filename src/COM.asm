@@ -46,6 +46,7 @@ OBUFFER:		ds VIRTUAL OBUFFER_SIZE
 OBUFFER_END:		equ OBUFFER + OBUFFER_SIZE
 OBUFFER_END_HIGH:	equ OBUFFER_END >> 8
 
+; scratch area: the same memory reused by various routines
 	VIRTUAL_ALIGN 100H
 scratch_buf:		ds VIRTUAL 32
 

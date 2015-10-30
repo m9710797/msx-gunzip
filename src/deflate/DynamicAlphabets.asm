@@ -48,16 +48,17 @@ ConstructDynamicAlphabets: PROC
 	cp DynamicAlphabets_MAX_HEADERCODELENGTHS + 1
 	call nc,System_ThrowException
 
-	; Read header code lengths
+	; Clear header code lengths
 	ld hl,headerCodeLengths
 	ld de,headerCodeLengths + 1
 	ld bc,DynamicAlphabets_MAX_HEADERCODELENGTHS - 1
 	ld (hl),b ; 0
 	ldir
+
+	; Read header code lengths
 	ld b,a	; hclen
 	ld hl,DynamicAlphabets_headerCodeOrder
-Loop:
-	ld e,(hl)
+Loop:	ld e,(hl)
 	ld d,0
 	inc hl
 	push hl
@@ -76,6 +77,7 @@ Loop:
 	ld bc,DynamicAlphabets_MAX_HEADERCODELENGTHS
 	ld de,headerCodeLengths ; de = length of symbols
 	ld hl,HeaderCodeTree
+	push hl
 	ld iy,DynamicAlphabets_headerCodeSymbols
 	call generate_huffman
 
@@ -86,8 +88,8 @@ Loop:
 	add a,e	; cannot overflow
 	ld e,a
 	inc d	; +1 for nested 8-bit loop
+	pop iy	; iy = HeaderCodeTree
 	pop ix	; ix = reader
-	ld iy,HeaderCodeTree
 	call Reader_PrepareReadBitInline
 	call DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths
 	call Reader_FinishReadBitInline
