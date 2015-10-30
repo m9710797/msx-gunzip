@@ -17,18 +17,19 @@ Writer: MACRO
 		dw 0
 	bufferEnd:
 		dw 0
-	flusher:
-		dw System_ThrowException
 	count:
 		dd 0
 	crc32:
 		dd 0FFFFFFFFH
+	fileHandle:
+		db 0FFH
 	_size:
 	ENDM
 
 Writer_class: Class Writer, Writer_template, Heap_main
 Writer_template: Writer
 
+; de = file path
 ; hl = buffer start
 ; bc = buffer size
 ; ix = this
@@ -47,6 +48,17 @@ Writer_Construct:
 	add hl,bc
 	ld (ix + Writer.bufferEnd),l
 	ld (ix + Writer.bufferEnd + 1),h
+
+	ld (ix + Writer.fileHandle),0FFH	; invalid file handle
+	ld a,d
+	or e
+	jr z,no_file
+	ld a,00000010B  ; write only
+	ld b,0
+	call DOS_CreateFileHandle
+	call Application_CheckDOSError
+	ld (ix + Writer.fileHandle),b
+no_file:
 	ld e,ixl
 	ld d,ixh
 	ret
@@ -54,7 +66,13 @@ Writer_Construct:
 ; ix = this
 ; ix <- this
 Writer_Destruct:
-	ret
+	call Writer_FlushBuffer
+	ld b,(ix + Writer.fileHandle)
+	ld a,b
+	inc a
+	ret z
+	call DOS_CloseFileHandle
+	jp Application_CheckDOSError
 
 ; a = value
 ; iy = this
@@ -233,9 +251,19 @@ Writer_FinishBlock_IY:
 ; ix = this
 ; Modifies: af, bc, de, hl
 Writer_FlushBuffer:
-	ld l,(ix + Writer.flusher)
-	ld h,(ix + Writer.flusher + 1)
-	jp hl
+	call DOS_ConsoleStatus  ; allow ctrl-c
+	ld b,(ix + Writer.fileHandle)
+	ld a,b
+	inc a
+	ret z
+	ld e,(ix + Writer.bufferStart)
+	ld d,(ix + Writer.bufferStart + 1)
+	ld l,(ix + Writer.bufferPosition)
+	ld h,(ix + Writer.bufferPosition + 1)
+	and a
+	sbc hl,de
+	call DOS_WriteToFileHandle
+	jp Application_CheckDOSError
 
 ; ix = this
 ; Modifies: hl, bc

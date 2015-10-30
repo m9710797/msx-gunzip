@@ -15,7 +15,7 @@ OBUFFER_SIZE: equ 8000H
 HEAP_SIZE: equ 0400H
 STACK_SIZE: equ 100H
 
-TPA: ds 3300H
+TPA: ds 3200H
 RAM: ds 0100H
 IBUFFER: ds VIRTUAL IBUFFER_SIZE
 OBUFFER: ds VIRTUAL OBUFFER_SIZE
@@ -42,7 +42,6 @@ COM_Main:
 	INCLUDE "deflate/DynamicAlphabets.asm"
 	INCLUDE "deflate/Reader.asm"
 	INCLUDE "deflate/Writer.asm"
-	INCLUDE "FileWriter.asm"
 
 	ALIGN 100H
 CRC32Table:

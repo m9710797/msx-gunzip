@@ -60,8 +60,8 @@ skip_print:
 	ld de,(cli_outputPath)
 	ld hl,OBUFFER
 	ld bc,OBUFFER_SIZE
-	call FileWriter_class.New
-	call FileWriter_Construct
+	call Writer_class.New
+	call Writer_Construct
 
 	pop hl
 	push hl
@@ -76,8 +76,8 @@ skip_print:
 	pop de
 	ld ixl,e
 	ld ixh,d
-	call FileWriter_Destruct
-	call FileWriter_class.Delete
+	call Writer_Destruct
+	call Writer_class.Delete
 	pop de
 	ld ixl,e
 	ld ixh,d
