@@ -2,21 +2,17 @@
 ; Inflate implementation
 ;
 Inflate: MACRO
-	writer:
-		dw 0
+	db 0   ; dummy
 	_size:
 	ENDM
 
 Inflate_class: Class Inflate, Inflate_template, Heap_main
 Inflate_template: Inflate
 
-; de = file writer
 ; ix = this
 ; ix <- this
 ; de <- this
 Inflate_Construct:
-	ld (ix + Inflate.writer),e
-	ld (ix + Inflate.writer + 1),d
 	ld e,ixl
 	ld d,ixh
 	ret
@@ -24,16 +20,6 @@ Inflate_Construct:
 ; ix = this
 ; ix <- this
 Inflate_Destruct:
-	ret
-
-; ix = this
-; de <- file writer
-; ix <- file writer
-Inflate_GetWriter:
-	ld e,(ix + Inflate.writer)
-	ld d,(ix + Inflate.writer + 1)
-	ld ixl,e
-	ld ixh,d
 	ret
 
 ; ix = this
@@ -89,11 +75,8 @@ Inflate_InflateUncompressed: PROC
 	inc d
 	ld c,d
 	push ix
-	push ix
-	call Inflate_GetWriter
-	ex (sp),ix
 	ld ix,ReaderObject
-	pop iy
+	ld iy,WriterObject
 Loop:
 	call Reader_Read
 	call Writer_Write_IY
@@ -131,11 +114,8 @@ Inflate_DoInflate:
 	ld de,DistanceTree
 	pop ix
 	push ix
-	ld c,(ix + Inflate.writer)
-	ld b,(ix + Inflate.writer + 1)
-	ld iyl,c
-	ld iyh,b
 	ld ix,ReaderObject
+	ld iy,WriterObject
 	call Reader_PrepareReadBitInline
 	call Inflate_DecodeLiteralLength
 	call Reader_FinishReadBitInline
@@ -524,7 +504,7 @@ Inflate_CopyAndNext_SetBigDistance:
 ; ix = reader
 ; iy = writer
 Inflate_CopyAndNext:
-	call Writer_Copy_IY
+	call Writer_Copy
 	exx
 	ex de,hl
 	jp hl  ; jp Inflate_DecodeLiteralLength

@@ -9,8 +9,6 @@ Archive_FCOMMENT: equ 1 << 4;
 Archive_RESERVED: equ 1 << 5 | 1 << 6 | 1 << 7;
 
 Archive: MACRO
-	writer:
-		dw 0
 	inflate:
 		dw 0
 	flags:
@@ -31,15 +29,10 @@ Archive: MACRO
 Archive_class: Class Archive, Archive_template, Heap_main
 Archive_template: Archive
 
-; de = buffer writer (min 32K)
 ; ix = this
 ; ix <- this
 ; de <- this
 Archive_Construct:
-	ld iyl,e  ; check if write buffer is at least 32K
-	ld iyh,d
-	ld (ix + Archive.writer),e
-	ld (ix + Archive.writer + 1),d
 	push ix
 	call Inflate_class.New
 	call Inflate_Construct
@@ -58,16 +51,6 @@ Archive_Destruct:
 	call Inflate_Destruct
 	call Inflate_class.Delete
 	pop ix
-	ret
-
-; ix = this
-; de <- file writer
-; ix <- file writer
-Archive_GetWriter:
-	ld e,(ix + Archive.writer)
-	ld d,(ix + Archive.writer + 1)
-	ld ixl,e
-	ld ixh,d
 	ret
 
 ; ix = this
@@ -220,10 +203,7 @@ Archive_SkipHeaderCRC:
 ; ix = this
 ; f <- nz: mismatch
 Archive_VerifyISIZE:
-	push ix
-	call Archive_GetWriter
 	call Writer_GetCount
-	pop ix
 	ld a,l
 	cp (ix + Archive.isize)
 	ret nz
@@ -240,10 +220,7 @@ Archive_VerifyISIZE:
 ; ix = this
 ; f <- nz: mismatch
 Archive_VerifyCRC32:
-	push ix
-	call Archive_GetWriter
 	call Writer_GetCRC32
-	pop ix
 	ld l,(ix + Archive.crc32)
 	ld h,(ix + Archive.crc32 + 1)
 	scf

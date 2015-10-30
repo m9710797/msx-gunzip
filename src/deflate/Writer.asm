@@ -1,60 +1,49 @@
 ;
 ; Memory buffer writer
-;
-Writer: MACRO
-	; a = value
-	; iy = this
-	Write_IY:
-		ld (0),a
-	bufferPosition: equ $ - 2
-		inc (iy + Writer.bufferPosition)
-		ret nz
-		jp Writer_Write_IY.Continue
 
-	count:
-		dd 0
-	crc32:
-		dd 0FFFFFFFFH
-	fileHandle:
-		db 0FFH
-	_size:
-	ENDM
+WriterObject:
+; a = value
+; iy = this
+	ld (0),a
+Writer_bufPos: equ $ - 2
+	inc (iy + Writer_bufPosOfst)
+	ret nz
+	jp Writer_Write_IY.Continue
 
-Writer_class: Class Writer, Writer_template, Heap_main
-Writer_template: Writer
+Writer_bufPosOfst: equ Writer_bufPos - WriterObject
+
+
+Writer_count:
+	dd 0
+Writer_crc32:
+	dd 0FFFFFFFFH
+Writer_fileHandle:
+	db 0FFH		; start with invalid file handle
+
 
 ; de = file path
-; ix = this
-; ix <- this
-; de <- this
 Writer_Construct:
 	ld a,l  ; check if buffer is 256-byte aligned
 	or c
 	call nz,System_ThrowException
 	ld hl,OBUFFER
-	ld (ix + Writer.bufferPosition),l
-	ld (ix + Writer.bufferPosition + 1),h
+	ld (Writer_bufPos),hl
 
-	ld (ix + Writer.fileHandle),0FFH	; invalid file handle
 	ld a,d
 	or e
-	jr z,no_file
+	ret z
 	ld a,00000010B  ; write only
 	ld b,0
 	call DOS_CreateFileHandle
 	call Application_CheckDOSError
-	ld (ix + Writer.fileHandle),b
-no_file:
-	ld e,ixl
-	ld d,ixh
+	ld a,b
+	ld (Writer_fileHandle),a
 	ret
 
-; ix = this
-; ix <- this
 Writer_Destruct:
 	call Writer_FlushBuffer
-	ld b,(ix + Writer.fileHandle)
-	ld a,b
+	ld a,(Writer_fileHandle)
+	ld b,a
 	inc a
 	ret z
 	call DOS_CloseFileHandle
@@ -67,19 +56,19 @@ Writer_Write_IY: PROC
 	jp iy
 Continue:
 	push af
-	ld a,(iy + Writer.bufferPosition + 1)
+	ld a,(Writer_bufPos + 1)
 	inc a
 	cp OBUFFER_END >> 8
 	call z,NextBlock
-	ld (iy + Writer.bufferPosition + 1),a
+	ld (Writer_bufPos + 1),a
 	pop af
 	ret
 NextBlock:
-	ld (iy + Writer.bufferPosition + 1),a
+	ld (Writer_bufPos + 1),a
 	push hl
-	call Writer_FinishBlock_IY
+	call Writer_FinishBlock
 	pop hl
-	ld a,(iy + Writer.bufferPosition + 1)
+	ld a,(Writer_bufPos + 1)
 	ret
 	ENDP
 
@@ -87,9 +76,8 @@ NextBlock:
 ; de = distance - 1
 ; iy = this
 ; Modifies: af, bc, de, hl
-Writer_Copy_IY: PROC
-	ld l,(iy + Writer.bufferPosition)
-	ld h,(iy + Writer.bufferPosition + 1)
+Writer_Copy: PROC
+	ld hl,(Writer_bufPos)
 	push hl
 	scf
 	sbc hl,de
@@ -101,14 +89,13 @@ WrapContinue:
 	pop de
 	ld a,OBUFFER_END_HIGH - 3
 	cp h  ; does the source have a 512 byte margin without wrapping?
-	jr c,Writer_Copy_Slow_IY
+	jr c,Writer_Copy_Slow
 	cp d  ; does the destination a 512 byte margin without wrapping?
-	jr c,Writer_Copy_Slow_IY
+	jr c,Writer_Copy_Slow
 	ldi
 	ldi
 	ldir
-	ld (iy + Writer.bufferPosition),e
-	ld (iy + Writer.bufferPosition + 1),d
+	ld (Writer_bufPos),de
 	ret
 Wrap:
 	add a,OBUFFER_SIZE >> 8
@@ -121,14 +108,14 @@ Wrap:
 ; de = buffer destination
 ; iy = this
 ; Modifies: af, bc, de, hl
-Writer_Copy_Slow_IY: PROC
+Writer_Copy_Slow: PROC
 	ld e,l
 	ld d,h
 	add hl,bc
 	jr c,Split
 	ld a,h
 	cp OBUFFER_END >> 8
-	jp c,Writer_WriteBlock_IY
+	jp c,Writer_WriteBlock
 ; hl = end address
 Split:
 	push bc
@@ -141,12 +128,12 @@ Split:
 	sbc hl,bc  ; hl = bytes until end
 	ld c,l
 	ld b,h
-	call Writer_WriteBlock_IY
+	call Writer_WriteBlock
 	pop bc
 	ld hl,OBUFFER
 	ld a,b
 	or c
-	jp nz,Writer_Copy_Slow_IY
+	jp nz,Writer_Copy_Slow
 	ret
 	ENDP
 
@@ -154,9 +141,8 @@ Split:
 ; de = source
 ; iy = this
 ; Modifies: af, bc, de, hl
-Writer_WriteBlock_IY: PROC
-	ld l,(iy + Writer.bufferPosition)
-	ld h,(iy + Writer.bufferPosition + 1)
+Writer_WriteBlock: PROC
+	ld hl,(Writer_bufPos)
 	add hl,bc
 	jr c,Split
 	ld a,h
@@ -166,8 +152,7 @@ Writer_WriteBlock_IY: PROC
 	sbc hl,bc
 	ex de,hl
 	ldir
-	ld (iy + Writer.bufferPosition),e
-	ld (iy + Writer.bufferPosition + 1),d
+	ld (Writer_bufPos),de
 	ret
 ; hl = end address
 Split:
@@ -182,22 +167,19 @@ Split:
 	ld c,l
 	ld b,h
 	ex de,hl
-	ld e,(iy + Writer.bufferPosition)
-	ld d,(iy + Writer.bufferPosition + 1)
+	ld de,(Writer_bufPos)
 	ldir
-	ld (iy + Writer.bufferPosition),e
-	ld (iy + Writer.bufferPosition + 1),d
+	ld (Writer_bufPos),de
 	push hl
-	call Writer_FinishBlock_IY
+	call Writer_FinishBlock
 	pop de
 	pop bc
 	ld a,b
 	or c
-	jp nz,Writer_WriteBlock_IY
+	jp nz,Writer_WriteBlock
 	ret
 	ENDP
 
-; ix = this
 ; hl <- buffer position
 ; Modifies: af
 Writer_FinishBlock:
@@ -209,71 +191,49 @@ Writer_FinishBlock:
 	pop de
 	pop bc
 	ld hl,OBUFFER
-	ld (ix + Writer.bufferPosition),l
-	ld (ix + Writer.bufferPosition + 1),h
+	ld (Writer_bufPos),hl
 	ret
 
-; iy = this
-; hl <- buffer position
-; Modifies: af
-Writer_FinishBlock_IY:
-	push iy
-	ex (sp),ix
-	call Writer_FinishBlock
-	pop ix
-	ret
-
-; ix = this
 ; Modifies: af, bc, de, hl
 Writer_FlushBuffer:
 	call DOS_ConsoleStatus  ; allow ctrl-c
-	ld b,(ix + Writer.fileHandle)
-	ld a,b
+	ld a,(Writer_fileHandle)
+	ld b,a
 	inc a
 	ret z
 	ld de,OBUFFER
-	ld l,(ix + Writer.bufferPosition)
-	ld h,(ix + Writer.bufferPosition + 1)
+	ld hl,(Writer_bufPos)
 	and a
 	sbc hl,de
 	call DOS_WriteToFileHandle
 	jp Application_CheckDOSError
 
-; ix = this
 ; Modifies: hl, bc
 Writer_IncreaseCount:
-	ld l,(ix + Writer.count)
-	ld h,(ix + Writer.count + 1)
+	ld hl,(Writer_count + 0)
 	ld bc,OBUFFER_SIZE
 	add hl,bc
-	ld (ix + Writer.count),l
-	ld (ix + Writer.count + 1),h
+	ld (Writer_count + 0),hl
 	ret nc
-	inc (ix + Writer.count + 2)
-	ret nz
-	inc (ix + Writer.count + 3)
+	ld hl,(Writer_count + 2)
+	inc hl
+	ld (Writer_count + 2),hl
 	ret
 
-; ix = this
 ; dehl <- count bytes written
 Writer_GetCount:
-	ld l,(ix + Writer.bufferPosition)
-	ld h,(ix + Writer.bufferPosition + 1)
+	ld hl,(Writer_bufPos)
 	ld bc,OBUFFER
 	and a
 	sbc hl,bc
-	call c,System_ThrowException
-	ld c,(ix + Writer.count)
-	ld b,(ix + Writer.count + 1)
-	ld e,(ix + Writer.count + 2)
-	ld d,(ix + Writer.count + 3)
+	ld bc,(Writer_count + 0)
+	ld de,(Writer_count + 2)
 	add hl,bc
 	ret nc
 	inc de
 	ret
 
 ; a = value
-; ix = this
 ; Modifies: af, bc, de, hl
 Writer_UpdateCRC32:
 	exx
@@ -282,30 +242,24 @@ Writer_UpdateCRC32:
 	ld hl,OBUFFER
 	ld bc,OBUFFER_SIZE
 	exx
-	ld e,(ix + Writer.crc32)
-	ld d,(ix + Writer.crc32 + 1)
-	ld c,(ix + Writer.crc32 + 2)
-	ld b,(ix + Writer.crc32 + 3)
+	ld de,(Writer_crc32 + 0)
+	ld bc,(Writer_crc32 + 2)
 	call Writer_CalculateCRC32
-	ld (ix + Writer.crc32),e
-	ld (ix + Writer.crc32 + 1),d
-	ld (ix + Writer.crc32 + 2),c
-	ld (ix + Writer.crc32 + 3),b
+	ld (Writer_crc32 + 0),de
+	ld (Writer_crc32 + 2),bc
 	exx
 	pop hl
 	pop bc
 	exx
 	ret
 
-; ix = this
 ; bcde <- crc32
 ; Modifies: af, bc, de, hl
 Writer_GetCRC32:
 	exx
 	push bc
 	push hl
-	ld l,(ix + Writer.bufferPosition)
-	ld h,(ix + Writer.bufferPosition + 1)
+	ld hl,(Writer_bufPos)
 	ld bc,OBUFFER
 	and a
 	sbc hl,bc
@@ -317,10 +271,8 @@ Writer_GetCRC32:
 	ld h,b
 	ld b,a
 	exx
-	ld e,(ix + Writer.crc32)
-	ld d,(ix + Writer.crc32 + 1)
-	ld c,(ix + Writer.crc32 + 2)
-	ld b,(ix + Writer.crc32 + 3)
+	ld de,(Writer_crc32 + 0)
+	ld bc,(Writer_crc32 + 2)
 	call nz,Writer_CalculateCRC32
 	exx
 	pop hl
@@ -331,7 +283,6 @@ Writer_GetCRC32:
 ; bc' = byte count
 ; hl' = read address
 ; bcde = current crc
-; ix = this
 ; bcde <- updated crc
 ; Modifies: af, bc, de, hl, bc', hl'
 Writer_CalculateCRC32: PROC

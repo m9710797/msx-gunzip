@@ -54,10 +54,8 @@ skip_print:
 	
 	; Create FileWriter
 	ld de,(cli_outputPath)
-	call Writer_class.New
 	call Writer_Construct
 
-	push de
 	call Archive_class.New
 	call Archive_Construct
 
@@ -65,9 +63,8 @@ skip_print:
 
 	call Archive_Destruct
 	call Archive_class.Delete
-	pop ix
+
 	call Writer_Destruct
-	call Writer_class.Delete
 	jp Reader_Destruct
 
 
