@@ -1,45 +1,18 @@
 ;
 ; Inflate implementation
 ;
-Inflate: MACRO
-	db 0   ; dummy
-	_size:
-	ENDM
-
-Inflate_class: Class Inflate, Inflate_template, Heap_main
-Inflate_template: Inflate
-
-; ix = this
-; ix <- this
-; de <- this
-Inflate_Construct:
-	ld e,ixl
-	ld d,ixh
-	ret
-
-; ix = this
-; ix <- this
-Inflate_Destruct:
-	ret
-
-; ix = this
 Inflate_Inflate:
-	push ix
 	ld ix,ReaderObject
 	call Reader_ReadBit
-	pop hl
 	push af
-	push hl
 	ld b,2
 	call Reader_ReadBits
-	pop ix
 	call Inflate_InflateBlock
 	pop af
 	jp nc,Inflate_Inflate
 	ret
 
 ; a = block type
-; ix = this
 Inflate_InflateBlock:
 	and a
 	jp z,Inflate_InflateUncompressed
@@ -49,9 +22,7 @@ Inflate_InflateBlock:
 	ld hl,Inflate_invalidBlockTypeError
 	jp Application_TerminateWithError
 
-; ix = this
 Inflate_InflateUncompressed: PROC
-	push ix
 	ld ix,ReaderObject
 	call Reader_Align
 	call Reader_Read
@@ -62,7 +33,6 @@ Inflate_InflateUncompressed: PROC
 	ld l,a
 	call Reader_Read
 	ld h,a
-	pop ix
 	scf
 	adc hl,de
 	ld hl,Inflate_invalidLengthError
@@ -74,8 +44,7 @@ Inflate_InflateUncompressed: PROC
 	dec de
 	inc d
 	ld c,d
-	push ix
-	ld ix,ReaderObject
+	ld ix,ReaderObject ; TODO remove ??
 	ld iy,WriterObject
 Loop:
 	call Reader_Read
@@ -83,14 +52,10 @@ Loop:
 	djnz Loop
 	dec c
 	jp nz,Loop
-	pop ix
 	ret
 	ENDP
 
-; ix = this
 Inflate_InflateFixedCompressed:
-	push ix
-
 	ld bc,FixedAlphabets_literalLengthCodeLengthsCount
 	ld de,FixedAlphabets_literalLengthCodeLengths
 	ld hl,LiteralTree
@@ -104,22 +69,17 @@ Inflate_InflateFixedCompressed:
 	call generate_huffman
 	jr Inflate_DoInflate
 
-; ix = this
 Inflate_InflateDynamicCompressed:
-	push ix
 	ld iy,ReaderObject
 	call ConstructDynamicAlphabets
 Inflate_DoInflate:
 	ld hl,LiteralTree
 	ld de,DistanceTree
-	pop ix
-	push ix
 	ld ix,ReaderObject
 	ld iy,WriterObject
 	call Reader_PrepareReadBitInline
 	call Inflate_DecodeLiteralLength
 	call Reader_FinishReadBitInline
-	pop ix
 	ret
 
 ; c = inline bit reader state

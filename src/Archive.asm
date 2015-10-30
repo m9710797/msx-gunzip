@@ -9,8 +9,6 @@ Archive_FCOMMENT: equ 1 << 4;
 Archive_RESERVED: equ 1 << 5 | 1 << 6 | 1 << 7;
 
 Archive: MACRO
-	inflate:
-		dw 0
 	flags:
 		db 0
 	mtime:
@@ -33,12 +31,6 @@ Archive_template: Archive
 ; ix <- this
 ; de <- this
 Archive_Construct:
-	push ix
-	call Inflate_class.New
-	call Inflate_Construct
-	pop ix
-	ld (ix + Archive.inflate),e
-	ld (ix + Archive.inflate + 1),d
 	ld e,ixl
 	ld d,ixh
 	ret
@@ -46,21 +38,6 @@ Archive_Construct:
 ; ix = this
 ; ix <- this
 Archive_Destruct:
-	push ix
-	call Archive_GetInflate
-	call Inflate_Destruct
-	call Inflate_class.Delete
-	pop ix
-	ret
-
-; ix = this
-; de <- Inflate implementation
-; ix <- Inflate implementation
-Archive_GetInflate:
-	ld e,(ix + Archive.inflate)
-	ld d,(ix + Archive.inflate + 1)
-	ld ixl,e
-	ld ixh,d
 	ret
 
 ; ix = this
@@ -76,7 +53,9 @@ Archive_Read:
 ; ix = this
 Archive_Extract:
 	call Archive_ReadHeader
-	call Archive_Inflate
+	push ix
+	call Inflate_Inflate
+	pop ix
 	call Archive_Verify
 	ret
 
@@ -130,14 +109,6 @@ Archive_ReadHeader:
 	ld a,(ix + Archive.flags)
 	and Archive_FHCRC
 	call nz,Archive_SkipHeaderCRC
-	ret
-
-; ix = this
-Archive_Inflate:
-	push ix
-	call Archive_GetInflate
-	call Inflate_Inflate
-	pop ix
 	ret
 
 ; ix = this
