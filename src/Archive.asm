@@ -9,8 +9,6 @@ Archive_FCOMMENT: equ 1 << 4;
 Archive_RESERVED: equ 1 << 5 | 1 << 6 | 1 << 7;
 
 Archive: MACRO
-	reader:
-		dw 0
 	writer:
 		dw 0
 	inflate:
@@ -33,7 +31,6 @@ Archive: MACRO
 Archive_class: Class Archive, Archive_template, Heap_main
 Archive_template: Archive
 
-; hl = buffer reader
 ; de = buffer writer (min 32K)
 ; ix = this
 ; ix <- this
@@ -41,8 +38,6 @@ Archive_template: Archive
 Archive_Construct:
 	ld iyl,e  ; check if write buffer is at least 32K
 	ld iyh,d
-	ld (ix + Archive.reader),l
-	ld (ix + Archive.reader + 1),h
 	ld (ix + Archive.writer),e
 	ld (ix + Archive.writer + 1),d
 	push ix
@@ -63,16 +58,6 @@ Archive_Destruct:
 	call Inflate_Destruct
 	call Inflate_class.Delete
 	pop ix
-	ret
-
-; ix = this
-; de <- file reader
-; ix <- file reader
-Archive_GetReader:
-	ld e,(ix + Archive.reader)
-	ld d,(ix + Archive.reader + 1)
-	ld ixl,e
-	ld ixh,d
 	ret
 
 ; ix = this
@@ -100,7 +85,7 @@ Archive_GetInflate:
 ; Modifies: de
 Archive_Read:
 	push ix
-	call Archive_GetReader
+	ld ix,ReaderObject
 	call Reader_Read
 	pop ix
 	ret
@@ -207,7 +192,7 @@ Archive_SkipExtra:
 	call Archive_Read
 	ld b,a
 	push ix
-	call Archive_GetReader
+	ld ix,ReaderObject
 	call Reader_Skip
 	pop ix
 	ret

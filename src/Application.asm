@@ -50,17 +50,13 @@ skip_print:
 
 	; Create FileReader
 	ld de,(cli_archivePath)
-	call Reader_class.New
 	call Reader_Construct
-	push de
 	
 	; Create FileWriter
 	ld de,(cli_outputPath)
 	call Writer_class.New
 	call Writer_Construct
 
-	pop hl
-	push hl
 	push de
 	call Archive_class.New
 	call Archive_Construct
@@ -69,16 +65,10 @@ skip_print:
 
 	call Archive_Destruct
 	call Archive_class.Delete
-	pop de
-	ld ixl,e
-	ld ixh,d
+	pop ix
 	call Writer_Destruct
 	call Writer_class.Delete
-	pop de
-	ld ixl,e
-	ld ixh,d
-	call Reader_Destruct
-	jp Reader_class.Delete
+	jp Reader_Destruct
 
 
 ; a <- DOS error code

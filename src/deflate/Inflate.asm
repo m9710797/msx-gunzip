@@ -2,8 +2,6 @@
 ; Inflate implementation
 ;
 Inflate: MACRO
-	reader:
-		dw 0
 	writer:
 		dw 0
 	_size:
@@ -12,14 +10,11 @@ Inflate: MACRO
 Inflate_class: Class Inflate, Inflate_template, Heap_main
 Inflate_template: Inflate
 
-; hl = file reader
 ; de = file writer
 ; ix = this
 ; ix <- this
 ; de <- this
 Inflate_Construct:
-	ld (ix + Inflate.reader),l
-	ld (ix + Inflate.reader + 1),h
 	ld (ix + Inflate.writer),e
 	ld (ix + Inflate.writer + 1),d
 	ld e,ixl
@@ -29,26 +24,6 @@ Inflate_Construct:
 ; ix = this
 ; ix <- this
 Inflate_Destruct:
-	ret
-
-; ix = this
-; de <- file reader
-; ix <- file reader
-Inflate_GetReader:
-	ld e,(ix + Inflate.reader)
-	ld d,(ix + Inflate.reader + 1)
-	ld ixl,e
-	ld ixh,d
-	ret
-
-; ix = this
-; de <- file reader
-; ix <- file reader
-Inflate_GetReaderIY:
-	ld e,(ix + Inflate.reader)
-	ld d,(ix + Inflate.reader + 1)
-	ld iyl,e
-	ld iyh,d
 	ret
 
 ; ix = this
@@ -64,7 +39,7 @@ Inflate_GetWriter:
 ; ix = this
 Inflate_Inflate:
 	push ix
-	call Inflate_GetReader
+	ld ix,ReaderObject
 	call Reader_ReadBit
 	pop hl
 	push af
@@ -91,7 +66,7 @@ Inflate_InflateBlock:
 ; ix = this
 Inflate_InflateUncompressed: PROC
 	push ix
-	call Inflate_GetReader
+	ld ix,ReaderObject
 	call Reader_Align
 	call Reader_Read
 	ld e,a
@@ -117,7 +92,7 @@ Inflate_InflateUncompressed: PROC
 	push ix
 	call Inflate_GetWriter
 	ex (sp),ix
-	call Inflate_GetReader
+	ld ix,ReaderObject
 	pop iy
 Loop:
 	call Reader_Read
@@ -149,7 +124,7 @@ Inflate_InflateFixedCompressed:
 ; ix = this
 Inflate_InflateDynamicCompressed:
 	push ix
-	call Inflate_GetReaderIY
+	ld iy,ReaderObject
 	call ConstructDynamicAlphabets
 Inflate_DoInflate:
 	ld hl,LiteralTree
@@ -160,10 +135,7 @@ Inflate_DoInflate:
 	ld b,(ix + Inflate.writer + 1)
 	ld iyl,c
 	ld iyh,b
-	ld c,(ix + Inflate.reader)
-	ld b,(ix + Inflate.reader + 1)
-	ld ixl,c
-	ld ixh,b
+	ld ix,ReaderObject
 	call Reader_PrepareReadBitInline
 	call Inflate_DecodeLiteralLength
 	call Reader_FinishReadBitInline

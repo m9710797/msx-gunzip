@@ -1,50 +1,45 @@
 ;
 ; Memory buffer reader
 ;
-Reader: MACRO
-	; ix = this
-	; a <- value
-	Read:
-		ld a,(0)
-	bufferPosition: equ $ - 2
-		inc (ix + Reader.bufferPosition)
-		ret nz
-		jp Reader_Read.Continue
 
-	endOfData:
-		db 0
-	bits:
-		db 0
-	fileHandle:
-		db 0FFH
-	_size:
-	ENDM
+;----
+ReaderObject: equ $
+; ix = this
+; a <- value
+	ld a,(0)
+Reader_bufPos: equ $ - 2
+	inc (ix + Reader_bufPosOfst)
+	ret nz
+	jp Reader_Read.Continue
 
-Reader_class: Class Reader, Reader_template, Heap_main
-Reader_template: Reader
+Reader_bits:
+	db 0
+
+Reader_bufPosOfst:    equ Reader_bufPos - ReaderObject
+Reader_bitsOfst:      equ Reader_bits   - ReaderObject
+;----
+
+Reader_endOfData:
+	db 0
+Reader_fileHandle:
+	db 0FFH
 
 ; de = file path
-; ix = this
-; ix <- this
-; de <- this
 Reader_Construct:
 	ld hl,IBUFFER
-	ld (ix + Reader.bufferPosition),l
-	ld (ix + Reader.bufferPosition + 1),h
+	ld (Reader_bufPos),hl
 
 	ld a,00000001B  ; read only
 	call DOS_OpenFileHandle
 	call Application_CheckDOSError
-	ld (ix + Reader.fileHandle),b
+	ld a,b
+	ld (Reader_fileHandle),a
 	call Reader_FillBuffer
-	ld e,ixl
-	ld d,ixh
 	ret
 
-; ix = this
-; ix <- this
 Reader_Destruct:
-	ld b,(ix + Reader.fileHandle)
+	ld a,(Reader_fileHandle)
+	ld b,a
 	call DOS_CloseFileHandle
 	jp Application_CheckDOSError
 
@@ -55,38 +50,41 @@ Reader_Read: PROC
 	jp ix
 Continue:
 	push af
-	ld a,(ix + Reader.bufferPosition + 1)
+	ld a,(Reader_bufPos + 1)
 	inc a
 	cp IBUFFER_END >> 8
 	call z,NextBlock
-	ld (ix + Reader.bufferPosition + 1),a
+	ld (Reader_bufPos + 1),a
 	pop af
 	ret
 NextBlock:
 	push bc
 	push de
 	push hl
-	bit 0,(ix + Reader.endOfData)
+	ld a,(Reader_endOfData)
+	or a
 	ld hl,Reader_endOfDataError
 	call nz,System_ThrowExceptionWithMessage
 	call Reader_FillBuffer
 	pop hl
 	pop de
 	pop bc
-	bit 0,(ix + Reader.endOfData)
+	ld a,(Reader_endOfData)
+	or a
 	ld a,IBUFFER >> 8	; bufferStart
 	ret z
 TrapNextRead:
-	ld (ix + Reader.bufferPosition),0FFH
+	ld a,0FFH
+	ld (Reader_bufPos),a
 	ld a,IBUFFER_END_HIGH - 1
 	ret
 	ENDP
 
-; ix = this
 ; Modifies: af, bc, de, hl
 Reader_FillBuffer: PROC
 	call DOS_ConsoleStatus  ; allow ctrl-c
-	ld b,(ix + Reader.fileHandle)
+	ld a,(Reader_fileHandle)
+	ld b,a
 	ld de,IBUFFER
 	ld hl,IBUFFER_SIZE
 	call DOS_ReadFromFileHandle
@@ -96,7 +94,8 @@ Reader_FillBuffer: PROC
 	ENDP
 
 Reader_MarkEndOfData:
-	ld (ix + Reader.endOfData),1
+	ld a,1
+	ld (Reader_endOfData),a
 	ret
 
 ; bc = nr of bytes to skip
@@ -114,26 +113,28 @@ Reader_Skip:
 ; f <- c: bit
 ; Modifies: none
 Reader_ReadBit:
-	srl (ix + Reader.bits)
+	srl (ix + Reader_bitsOfst)
 	ret nz  ; return if sentinel bit is still present
 	push bc
 	ld c,a
 	call Reader_Read
 	scf  ; set sentinel bit
 	rra
-	ld (ix + Reader.bits),a
+	ld (Reader_bits),a
 	ld a,c
 	pop bc
 	ret
 
 ; c <- inline bit reader state
 Reader_PrepareReadBitInline:
-	ld c,(ix + Reader.bits)
+	ld a,(Reader_bits)
+	ld c,a
 	ret
 
 ; c = inline bit reader state
 Reader_FinishReadBitInline:
-	ld (ix + Reader.bits),c
+	ld a,c
+	ld (Reader_bits),a
 	ret
 
 ; c = inline bit reader state
@@ -325,7 +326,8 @@ Reader_ReadBits_IY:
 
 ; ix = this
 Reader_Align:
-	ld (ix + Reader.bits),0
+	xor a
+	ld (Reader_bits),a
 	ret
 
 ;
