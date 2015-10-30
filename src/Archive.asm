@@ -17,23 +17,24 @@ Archive_crc32:
 
 Archive_Extract:
 	; Read header
-	call Archive_Read
+	ld ix,ReaderObject
+	call Reader_Read
 	cp 31  ; gzip signature (1)
 	ld hl,Archive_notGzipError
 	jp nz,Application_TerminateWithError
-	call Archive_Read
+	call Reader_Read
 	cp 139  ; gzip signature (1)
 	ld hl,Archive_notGzipError
 	jp nz,Application_TerminateWithError
-	call Archive_Read
+	call Reader_Read
 	cp 8  ; deflate compression ID (1)
 	ld hl,Archive_notDeflateError
 	jp nz,Application_TerminateWithError
 
-	call Archive_Read
+	call Reader_Read
 	ld (Archive_flags),a
 	ld bc,6	; skip mtime[4], xfl, os
-	call Archive_SkipBC
+	call Reader_Skip
 
 	ld a,(Archive_flags)
 	and Archive_RESERVED
@@ -42,7 +43,13 @@ Archive_Extract:
 
 	ld a,(Archive_flags)
 	and Archive_FEXTRA
-	call nz,Archive_SkipExtra
+	jr z,no_skip_extra
+	call Reader_Read
+	ld c,a
+	call Reader_Read
+	ld b,a
+	call Reader_Skip
+no_skip_extra:
 
 	ld a,(Archive_flags)
 	and Archive_FNAME
@@ -55,27 +62,28 @@ Archive_Extract:
 	ld a,(Archive_flags)
 	and Archive_FHCRC
 	ld bc,2
-	call nz,Archive_SkipBC
+	call nz,Reader_Skip
 
-	; actual deflate
+	; actual inflate
 	call Inflate_Inflate
 
 	; verify
-	call Archive_Read
+	ld ix,ReaderObject
+	call Reader_Read
 	ld (Archive_crc32 + 0),a
-	call Archive_Read
+	call Reader_Read
 	ld (Archive_crc32 + 1),a
-	call Archive_Read
+	call Reader_Read
 	ld (Archive_crc32 + 2),a
-	call Archive_Read
+	call Reader_Read
 	ld (Archive_crc32 + 3),a
-	call Archive_Read
+	call Reader_Read
 	ld (Archive_isize + 0),a
-	call Archive_Read
+	call Reader_Read
 	ld (Archive_isize + 1),a
-	call Archive_Read
+	call Reader_Read
 	ld (Archive_isize + 2),a
-	call Archive_Read
+	call Reader_Read
 	ld (Archive_isize + 3),a
 
 	call Archive_VerifyISIZE
@@ -87,17 +95,9 @@ Archive_Extract:
 	jp nz,Application_TerminateWithError
 	ret
 
-Archive_SkipExtra:
-	call Archive_Read
-	ld c,a
-	call Archive_Read
-	ld b,a
-Archive_SkipBC
-	ld ix,ReaderObject
-	jp Reader_Skip
 
 Archive_SkipZString:
-	call Archive_Read
+	call Reader_Read
 	and a
 	jr nz,Archive_SkipZString
 	ret
@@ -130,13 +130,6 @@ Archive_VerifyCRC32:
 	scf
 	adc hl,bc
 	ret
-
-
-; a <- value
-; Modifies: de
-Archive_Read:
-	ld ix,ReaderObject
-	jp Reader_Read
 
 ;
 Archive_notGzipError:

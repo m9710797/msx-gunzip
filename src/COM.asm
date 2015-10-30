@@ -34,7 +34,7 @@ CRC32Table:
 
 LiteralTree:		ds VIRTUAL 11 * (288 - 1)
 DistanceTree:		ds VIRTUAL 11 * (32 - 1)
-cli_buffer:		ds VIRTUAL 255
+cli_buffer:		ds VIRTUAL 255	; TODO could be reused once files are opened
 
 	VIRTUAL_ALIGN 100H
 IBUFFER:		ds VIRTUAL IBUFFER_SIZE
