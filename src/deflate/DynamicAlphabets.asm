@@ -172,7 +172,7 @@ DynamicAlphabets_WriteLength: REPT 16, ?value
 ; ix = reader
 ; iy = header code alphabet root
 DynamicAlphabets_Copy:
-	call Reader_ReadBitsInline_2
+	call Reader_ReadBitsInline_2_IX
 	add a,3
 	ld b,a
 	dec hl
@@ -187,7 +187,7 @@ DynamicAlphabets_Copy:
 ; ix = reader
 ; iy = header code alphabet root
 DynamicAlphabets_FillZero_3:
-	call Reader_ReadBitsInline_3
+	call Reader_ReadBitsInline_3_IX
 	add a,3
 	ld b,a
 	xor a
@@ -200,7 +200,7 @@ DynamicAlphabets_FillZero_3:
 ; ix = reader
 ; iy = header code alphabet root
 DynamicAlphabets_FillZero_11:
-	call Reader_ReadBitsInline_7
+	call Reader_ReadBitsInline_7_IX
 	add a,11
 	ld b,a
 	xor a

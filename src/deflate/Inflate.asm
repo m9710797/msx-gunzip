@@ -3,10 +3,10 @@
 ;
 Inflate_Inflate:
 	ld ix,ReaderObject
-	call Reader_ReadBit
+	call Reader_ReadBit_IX
 	push af
 	ld b,2
-	call Reader_ReadBits
+	call Reader_ReadBits_IX
 	call Inflate_InflateBlock
 	pop af
 	jr nc,Inflate_Inflate
@@ -25,13 +25,13 @@ Inflate_InflateBlock:
 Inflate_InflateUncompressed: PROC
 	ld ix,ReaderObject
 	call Reader_Align
-	call Reader_Read
+	call Reader_Read_IX
 	ld e,a
-	call Reader_Read
+	call Reader_Read_IX
 	ld d,a
-	call Reader_Read
+	call Reader_Read_IX
 	ld l,a
-	call Reader_Read
+	call Reader_Read_IX
 	ld h,a
 	scf
 	adc hl,de
@@ -45,7 +45,7 @@ Inflate_InflateUncompressed: PROC
 	inc d
 	ld c,d
 	ld iy,WriterObject
-Loop:	call Reader_Read
+Loop:	call Reader_Read_IX
 	call Writer_Write_IY
 	djnz Loop
 	dec c
@@ -155,83 +155,83 @@ Inflate_CopyLength.7:
 	ld bc,10
 	jp Inflate_DecodeDistance
 Inflate_CopyLength.8:
-	call Reader_ReadBitsInline_1
+	call Reader_ReadBitsInline_1_IX
 	add a,11
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.9:
-	call Reader_ReadBitsInline_1
+	call Reader_ReadBitsInline_1_IX
 	add a,13
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.10:
-	call Reader_ReadBitsInline_1
+	call Reader_ReadBitsInline_1_IX
 	add a,15
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.11:
-	call Reader_ReadBitsInline_1
+	call Reader_ReadBitsInline_1_IX
 	add a,17
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.12:
-	call Reader_ReadBitsInline_2
+	call Reader_ReadBitsInline_2_IX
 	add a,19
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.13:
-	call Reader_ReadBitsInline_2
+	call Reader_ReadBitsInline_2_IX
 	add a,23
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.14:
-	call Reader_ReadBitsInline_2
+	call Reader_ReadBitsInline_2_IX
 	add a,27
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.15:
-	call Reader_ReadBitsInline_2
+	call Reader_ReadBitsInline_2_IX
 	add a,31
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.16:
-	call Reader_ReadBitsInline_3
+	call Reader_ReadBitsInline_3_IX
 	add a,35
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.17:
-	call Reader_ReadBitsInline_3
+	call Reader_ReadBitsInline_3_IX
 	add a,43
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.18:
-	call Reader_ReadBitsInline_3
+	call Reader_ReadBitsInline_3_IX
 	add a,51
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.19:
-	call Reader_ReadBitsInline_3
+	call Reader_ReadBitsInline_3_IX
 	add a,59
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.20:
-	call Reader_ReadBitsInline_4
+	call Reader_ReadBitsInline_4_IX
 	add a,67
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.21:
-	call Reader_ReadBitsInline_4
+	call Reader_ReadBitsInline_4_IX
 	add a,83
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.22:
-	call Reader_ReadBitsInline_4
+	call Reader_ReadBitsInline_4_IX
 	add a,99
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.23:
-	call Reader_ReadBitsInline_4
+	call Reader_ReadBitsInline_4_IX
 	add a,115
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.24:
-	call Reader_ReadBitsInline_5
+	call Reader_ReadBitsInline_5_IX
 	add a,131
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.25:
-	call Reader_ReadBitsInline_5
+	call Reader_ReadBitsInline_5_IX
 	add a,163
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.26:
-	call Reader_ReadBitsInline_5
+	call Reader_ReadBitsInline_5_IX
 	add a,195
 	jp Inflate_DecodeDistance_SetLength
 Inflate_CopyLength.27:
-	call Reader_ReadBitsInline_5
+	call Reader_ReadBitsInline_5_IX
 	add a,227
 	exx
 	ld c,a
@@ -291,136 +291,136 @@ Inflate_CopyDistance.3:
 	ld de,4 - 1
 	jp Inflate_CopyAndNext
 Inflate_CopyDistance.4:
-	call Reader_ReadBitsInline_1
+	call Reader_ReadBitsInline_1_IX
 	add a,5 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.5:
-	call Reader_ReadBitsInline_1
+	call Reader_ReadBitsInline_1_IX
 	add a,7 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.6:
-	call Reader_ReadBitsInline_2
+	call Reader_ReadBitsInline_2_IX
 	add a,9 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.7:
-	call Reader_ReadBitsInline_2
+	call Reader_ReadBitsInline_2_IX
 	add a,13 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.8:
-	call Reader_ReadBitsInline_3
+	call Reader_ReadBitsInline_3_IX
 	add a,17 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.9:
-	call Reader_ReadBitsInline_3
+	call Reader_ReadBitsInline_3_IX
 	add a,25 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.10:
-	call Reader_ReadBitsInline_4
+	call Reader_ReadBitsInline_4_IX
 	add a,33 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.11:
-	call Reader_ReadBitsInline_4
+	call Reader_ReadBitsInline_4_IX
 	add a,49 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.12:
-	call Reader_ReadBitsInline_5
+	call Reader_ReadBitsInline_5_IX
 	add a,65 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.13:
-	call Reader_ReadBitsInline_5
+	call Reader_ReadBitsInline_5_IX
 	add a,97 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.14:
-	call Reader_ReadBitsInline_6
+	call Reader_ReadBitsInline_6_IX
 	add a,129 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.15:
-	call Reader_ReadBitsInline_6
+	call Reader_ReadBitsInline_6_IX
 	add a,193 - 1
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.16:
-	call Reader_ReadBitsInline_7
+	call Reader_ReadBitsInline_7_IX
 	exx
 	ld e,a
 	ld d,257 - 1 >> 8
 	jp Inflate_CopyAndNext
 Inflate_CopyDistance.17:
-	call Reader_ReadBitsInline_7
+	call Reader_ReadBitsInline_7_IX
 	exx
 	add a,385 - 1 & 0FFH
 	ld e,a
 	ld d,385 - 1 >> 8
 	jp Inflate_CopyAndNext
 Inflate_CopyDistance.18:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	exx
 	ld e,a
 	ld d,513 - 1 >> 8
 	jp Inflate_CopyAndNext
 Inflate_CopyDistance.19:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	exx
 	ld e,a
 	ld d,769 - 1 >> 8
 	jp Inflate_CopyAndNext
 Inflate_CopyDistance.20:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	ex af,af'
-	call Reader_ReadBitsInline_1
+	call Reader_ReadBitsInline_1_IX
 	add a,1025 - 1 >> 8
 	jp Inflate_CopyAndNext_SetBigDistance
 Inflate_CopyDistance.21:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	ex af,af'
-	call Reader_ReadBitsInline_1
+	call Reader_ReadBitsInline_1_IX
 	add a,1537 - 1 >> 8
 	jp Inflate_CopyAndNext_SetBigDistance
 Inflate_CopyDistance.22:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	ex af,af'
-	call Reader_ReadBitsInline_2
+	call Reader_ReadBitsInline_2_IX
 	add a,2049 - 1 >> 8
 	jp Inflate_CopyAndNext_SetBigDistance
 Inflate_CopyDistance.23:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	ex af,af'
-	call Reader_ReadBitsInline_2
+	call Reader_ReadBitsInline_2_IX
 	add a,3073 - 1 >> 8
 	jp Inflate_CopyAndNext_SetBigDistance
 Inflate_CopyDistance.24:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	ex af,af'
-	call Reader_ReadBitsInline_3
+	call Reader_ReadBitsInline_3_IX
 	add a,4097 - 1 >> 8
 	jp Inflate_CopyAndNext_SetBigDistance
 Inflate_CopyDistance.25:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	ex af,af'
-	call Reader_ReadBitsInline_3
+	call Reader_ReadBitsInline_3_IX
 	add a,6145 - 1 >> 8
 	jp Inflate_CopyAndNext_SetBigDistance
 Inflate_CopyDistance.26:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	ex af,af'
-	call Reader_ReadBitsInline_4
+	call Reader_ReadBitsInline_4_IX
 	add a,8193 - 1 >> 8
 	jp Inflate_CopyAndNext_SetBigDistance
 Inflate_CopyDistance.27:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	ex af,af'
-	call Reader_ReadBitsInline_4
+	call Reader_ReadBitsInline_4_IX
 	add a,12289 - 1 >> 8
 	jp Inflate_CopyAndNext_SetBigDistance
 Inflate_CopyDistance.28:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	ex af,af'
-	call Reader_ReadBitsInline_5
+	call Reader_ReadBitsInline_5_IX
 	add a,16385 - 1 >> 8
 	jp Inflate_CopyAndNext_SetBigDistance
 Inflate_CopyDistance.29:
-	call Reader_ReadBitsInline_8
+	call Reader_ReadBitsInline_8_IX
 	ex af,af'
-	call Reader_ReadBitsInline_5
+	call Reader_ReadBitsInline_5_IX
 	add a,24577 - 1 >> 8
 	jp Inflate_CopyAndNext_SetBigDistance
 
@@ -687,16 +687,16 @@ create_loop:
 	;            ix -> remaining code bits (MSB aligned)
 	;            c  -> number of remaining bits
 	;            b  -> 0
-	; generate 'Reader_ReadBitInline'
+	; generate 'Reader_ReadBitInline_IX'
 	ld (hl),0CBH		; SRL C
 	inc hl
 	ld (hl),39H
 	inc hl
 	ld (hl),0CCH		; CALL Z,nn
 	inc hl
-	ld (hl),Reader_ReadBitInline_NextByte & 0FFH
+	ld (hl),Reader_ReadBitInline_NextByte_IX & 0FFH
 	inc hl
-	ld (hl),Reader_ReadBitInline_NextByte >> 8
+	ld (hl),Reader_ReadBitInline_NextByte_IX >> 8
 	inc hl
 
 	; generate JP NC,0 / JP C,0
@@ -767,7 +767,7 @@ follow:	; invariant: hl = current (existing) huffman node
 	inc hl
 	inc hl
 	inc hl
-	inc hl			; skip Reader_ReadBitInline
+	inc hl			; skip Reader_ReadBitInline_IX
 	dec c
 	jr nz,follow_loop
 
