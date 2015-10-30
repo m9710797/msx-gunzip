@@ -52,8 +52,8 @@ skip_print:
 	ld de,(cli_archivePath)
 	ld hl,IBUFFER
 	ld bc,IBUFFER_SIZE
-	call FileReader_class.New
-	call FileReader_Construct
+	call Reader_class.New
+	call Reader_Construct
 	push de
 	
 	; Create FileWriter
@@ -81,8 +81,8 @@ skip_print:
 	pop de
 	ld ixl,e
 	ld ixh,d
-	call FileReader_Destruct
-	jp FileReader_class.Delete
+	call Reader_Destruct
+	jp Reader_class.Delete
 
 
 ; a <- DOS error code

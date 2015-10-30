@@ -42,7 +42,6 @@ COM_Main:
 	INCLUDE "deflate/DynamicAlphabets.asm"
 	INCLUDE "deflate/Reader.asm"
 	INCLUDE "deflate/Writer.asm"
-	INCLUDE "FileReader.asm"
 	INCLUDE "FileWriter.asm"
 
 	ALIGN 100H

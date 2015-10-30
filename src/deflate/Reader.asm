@@ -17,18 +17,19 @@ Reader: MACRO
 		dw 0
 	bufferEnd:
 		dw 0
-	filler:
-		dw Reader_MarkEndOfData
 	endOfData:
 		db 0
 	bits:
 		db 0
+	fileHandle:
+		db 0FFH
 	_size:
 	ENDM
 
 Reader_class: Class Reader, Reader_template, Heap_main
 Reader_template: Reader
 
+; de = file path
 ; hl = buffer start
 ; bc = buffer size
 ; ix = this
@@ -47,6 +48,12 @@ Reader_Construct:
 	add hl,bc
 	ld (ix + Reader.bufferEnd),l
 	ld (ix + Reader.bufferEnd + 1),h
+
+	ld a,00000001B  ; read only
+	call DOS_OpenFileHandle
+	call Application_CheckDOSError
+	ld (ix + Reader.fileHandle),b
+	call Reader_FillBuffer
 	ld e,ixl
 	ld d,ixh
 	ret
@@ -54,7 +61,9 @@ Reader_Construct:
 ; ix = this
 ; ix <- this
 Reader_Destruct:
-	ret
+	ld b,(ix + Reader.fileHandle)
+	call DOS_CloseFileHandle
+	jp Application_CheckDOSError
 
 ; ix = this
 ; a <- value
@@ -93,11 +102,24 @@ TrapNextRead:
 
 ; ix = this
 ; Modifies: af, bc, de, hl
-Reader_FillBuffer:
-	ld l,(ix + Reader.filler)
-	ld h,(ix + Reader.filler + 1)
-	jp hl
-
+Reader_FillBuffer: PROC
+	call DOS_ConsoleStatus  ; allow ctrl-c
+	ld b,(ix + Reader.fileHandle)
+	ld e,(ix + Reader.bufferStart)
+	ld d,(ix + Reader.bufferStart + 1)
+	ld l,(ix + Reader.bufferEnd)
+	ld h,(ix + Reader.bufferEnd + 1)
+	and a
+	sbc hl,de
+	call DOS_ReadFromFileHandle
+	cp .EOF
+	jp z,EndOfFile
+	call Application_CheckDOSError
+	ret
+EndOfFile:
+	call Reader_MarkEndOfData
+	ret
+	ENDP
 ; ix = this
 Reader_MarkEndOfData:
 	ld (ix + Reader.endOfData),1
