@@ -8,59 +8,15 @@ Archive_FNAME: equ 1 << 3;
 Archive_FCOMMENT: equ 1 << 4;
 Archive_RESERVED: equ 1 << 5 | 1 << 6 | 1 << 7;
 
-Archive: MACRO
-	flags:
-		db 0
-	mtime:
-		dd 0
-	xfl:
-		db 0
-	os:
-		db 0
-	isize:
-		dd 0
-	crc32:
-		dd 0
-	_size:
-	ENDM
+Archive_flags:
+	db 0	; TODO not used outside Archive_ReadHeader
+Archive_isize:
+	dd 0
+Archive_crc32:
+	dd 0
 
-Archive_class: Class Archive, Archive_template, Heap_main
-Archive_template: Archive
-
-; ix = this
-; ix <- this
-; de <- this
-Archive_Construct:
-	ld e,ixl
-	ld d,ixh
-	ret
-
-; ix = this
-; ix <- this
-Archive_Destruct:
-	ret
-
-; ix = this
-; a <- value
-; Modifies: de
-Archive_Read:
-	push ix
-	ld ix,ReaderObject
-	call Reader_Read
-	pop ix
-	ret
-
-; ix = this
 Archive_Extract:
-	call Archive_ReadHeader
-	push ix
-	call Inflate_Inflate
-	pop ix
-	call Archive_Verify
-	ret
-
-; ix = this
-Archive_ReadHeader:
+	; Read header
 	call Archive_Read
 	cp 31  ; gzip signature (1)
 	ld hl,Archive_notGzipError
@@ -75,133 +31,112 @@ Archive_ReadHeader:
 	jp nz,Application_TerminateWithError
 
 	call Archive_Read
-	ld (ix + Archive.flags),a
-	call Archive_Read
-	ld (ix + Archive.mtime),a
-	call Archive_Read
-	ld (ix + Archive.mtime + 1),a
-	call Archive_Read
-	ld (ix + Archive.mtime + 2),a
-	call Archive_Read
-	ld (ix + Archive.mtime + 3),a
-	call Archive_Read
-	ld (ix + Archive.xfl),a
-	call Archive_Read
-	ld (ix + Archive.os),a
+	ld (Archive_flags),a
+	ld bc,6	; skip mtime[4], xfl, os
+	call Archive_SkipBC
 
-	ld a,(ix + Archive.flags)
+	ld a,(Archive_flags)
 	and Archive_RESERVED
 	ld hl,Archive_unknownFlagError
 	jp nz,Application_TerminateWithError
 
-	ld a,(ix + Archive.flags)
+	ld a,(Archive_flags)
 	and Archive_FEXTRA
 	call nz,Archive_SkipExtra
 
-	ld a,(ix + Archive.flags)
+	ld a,(Archive_flags)
 	and Archive_FNAME
-	call nz,Archive_SkipName
+	call nz,Archive_SkipZString
 
-	ld a,(ix + Archive.flags)
+	ld a,(Archive_flags)
 	and Archive_FCOMMENT
-	call nz,Archive_SkipComment
+	call nz,Archive_SkipZString
 
-	ld a,(ix + Archive.flags)
+	ld a,(Archive_flags)
 	and Archive_FHCRC
-	call nz,Archive_SkipHeaderCRC
-	ret
+	ld bc,2
+	call nz,Archive_SkipBC
 
-; ix = this
-Archive_Verify:
+	; actual deflate
+	call Inflate_Inflate
+
+	; verify
 	call Archive_Read
-	ld (ix + Archive.crc32),a
+	ld (Archive_crc32 + 0),a
 	call Archive_Read
-	ld (ix + Archive.crc32 + 1),a
+	ld (Archive_crc32 + 1),a
 	call Archive_Read
-	ld (ix + Archive.crc32 + 2),a
+	ld (Archive_crc32 + 2),a
 	call Archive_Read
-	ld (ix + Archive.crc32 + 3),a
+	ld (Archive_crc32 + 3),a
 	call Archive_Read
-	ld (ix + Archive.isize),a
+	ld (Archive_isize + 0),a
 	call Archive_Read
-	ld (ix + Archive.isize + 1),a
+	ld (Archive_isize + 1),a
 	call Archive_Read
-	ld (ix + Archive.isize + 2),a
+	ld (Archive_isize + 2),a
 	call Archive_Read
-	ld (ix + Archive.isize + 3),a
+	ld (Archive_isize + 3),a
 
 	call Archive_VerifyISIZE
 	ld hl,Archive_isizeMismatchError
-	call nz,Application_TerminateWithError
+	jp nz,Application_TerminateWithError
 
 	call Archive_VerifyCRC32
 	ld hl,Archive_crc32MismatchError
-	call nz,Application_TerminateWithError
+	jp nz,Application_TerminateWithError
 	ret
 
-; ix = this
 Archive_SkipExtra:
 	call Archive_Read
 	ld c,a
 	call Archive_Read
 	ld b,a
-	push ix
+Archive_SkipBC
 	ld ix,ReaderObject
-	call Reader_Skip
-	pop ix
-	ret
+	jp Reader_Skip
 
-; ix = this
-Archive_SkipName:
+Archive_SkipZString:
 	call Archive_Read
 	and a
-	jp nz,Archive_SkipName
+	jr nz,Archive_SkipZString
 	ret
 
-; ix = this
-Archive_SkipComment:
-	call Archive_Read
-	and a
-	jp nz,Archive_SkipComment
-	ret
 
-; ix = this
-Archive_SkipHeaderCRC:
-	call Archive_Read
-	call Archive_Read
-	ret
-
-; ix = this
 ; f <- nz: mismatch
 Archive_VerifyISIZE:
 	call Writer_GetCount
-	ld a,l
-	cp (ix + Archive.isize)
+	ld a,(Archive_isize + 0)
+	cp l
 	ret nz
-	ld a,h
-	cp (ix + Archive.isize + 1)
+	ld a,(Archive_isize + 1)
+	cp h
 	ret nz
-	ld a,e
-	cp (ix + Archive.isize + 2)
+	ld a,(Archive_isize + 2)
+	cp e
 	ret nz
-	ld a,d
-	cp (ix + Archive.isize + 3)
+	ld a,(Archive_isize + 3)
+	cp d
 	ret
 
-; ix = this
 ; f <- nz: mismatch
 Archive_VerifyCRC32:
 	call Writer_GetCRC32
-	ld l,(ix + Archive.crc32)
-	ld h,(ix + Archive.crc32 + 1)
+	ld hl,(Archive_crc32 + 0)
 	scf
 	adc hl,de
 	ret nz
-	ld l,(ix + Archive.crc32 + 2)
-	ld h,(ix + Archive.crc32 + 3)
+	ld hl,(Archive_crc32 + 2)
 	scf
 	adc hl,bc
 	ret
+
+
+; a <- value
+; Modifies: de
+Archive_Read:
+	ld ix,ReaderObject
+	jp Reader_Read
 
 ;
 Archive_notGzipError:

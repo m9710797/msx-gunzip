@@ -56,13 +56,7 @@ skip_print:
 	ld de,(cli_outputPath)
 	call Writer_Construct
 
-	call Archive_class.New
-	call Archive_Construct
-
 	call Archive_Extract
-
-	call Archive_Destruct
-	call Archive_class.Delete
 
 	call Writer_Destruct
 	jp Reader_Destruct
