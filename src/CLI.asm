@@ -8,8 +8,6 @@ cli_outputPath:
 	dw 0
 cli_quiet:
 	db 0
-cli_buffer:
-	ds 255
 
 
 ParseCLI: PROC
@@ -18,9 +16,7 @@ ParseCLI: PROC
 	ld bc,255 * 256 + 6BH ; _GENV
 	call BDOS
 
-	ld de,cli_buffer
-Loop:
-	ld a,(de)
+Loop:	ld a,(de)
 	and a
 	ret z
 	cp "/"
@@ -73,7 +69,7 @@ OutputPath:
 	ld hl,CLI_multiplePathsError
 	call nz,Application_TerminateWithError
 	ld (cli_outputPath),de
-	jp ParsePath
+	jr ParsePath
 
 	ENDP
 
