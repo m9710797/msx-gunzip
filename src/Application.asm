@@ -8,13 +8,10 @@ Application_Main:
 	jp c,Application_TerminateWithError
 
 	; Check if the stack is well above the heap
-	ld hl,-(HEAP + HEAP_SIZE + STACK_SIZE)
+	ld hl,-(MEMORY_END + STACK_SIZE)
 	add hl,sp
 	ld hl,Application_insufficientTPAError
 	jp nc,Application_TerminateWithError
-
-	ld ix,Heap_main
-	call Heap_Construct
 
 	; Parse CLI
 	call ParseCLI
