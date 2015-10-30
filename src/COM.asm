@@ -16,11 +16,9 @@ STACK_SIZE: equ 100H
 ; Program entry point
 ;
 COM_Main:
-	jp Application_Main
-
+	INCLUDE "Application.asm"
 	INCLUDE "BIOS.asm"
 	INCLUDE "System.asm"
-	INCLUDE "Application.asm"
 	INCLUDE "CLI.asm"
 	INCLUDE "Archive.asm"
 	INCLUDE "deflate/Inflate.asm"
@@ -28,6 +26,7 @@ COM_Main:
 	INCLUDE "deflate/DynamicAlphabets.asm"
 	INCLUDE "deflate/Reader.asm"
 	INCLUDE "deflate/Writer.asm"
+code_end:
 
 	ALIGN 100H
 CRC32Table:

@@ -22,7 +22,7 @@ Application_Main:
 	ld hl,-(MEMORY_END + STACK_SIZE)
 	add hl,sp
 	ld hl,Application_insufficientTPAError
-	jp nc,Application_TerminateWithError
+	jr nc,Application_TerminateWithError
 
 	; Parse CLI
 	call ParseCLI
@@ -30,7 +30,7 @@ Application_Main:
 	ld a,l
 	or h
 	ld hl,Application_usageInstructions
-	jp z,Application_TerminateWithError
+	jr z,Application_TerminateWithError
 
 	; Print Welcome
 	ld a,(cli_quiet)
@@ -74,7 +74,6 @@ skip_print:
 Application_CheckDOSError:
 	and a
 	ret z
-Application_TerminateWithDOSError:
 	ld b,a
 	ld de,scratch_buf
 	ld c,66H ; _EXPLAIN
@@ -86,6 +85,7 @@ Application_TerminateWithDOSError:
 ; hl <- message
 Application_TerminateWithError:
 	call System_Print
+	;jr DOS_Terminate
 
 DOS_Terminate:
 	ld bc,1 * 256 + 62H ; _TERM
