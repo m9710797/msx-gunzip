@@ -25,9 +25,9 @@ HeaderCodeTree:
 
 ConstructDynamicAlphabets: PROC
 	; Read hlit
-	ld iy,ReaderObject
+	ld ix,ReaderObject
 	ld b,5
-	call Reader_ReadBits_IY
+	call Reader_ReadBits_IX
 	inc a
 	cp (DynamicAlphabets_MAX_LITERALLENGTHCODELENGTHS & 0FFH) + 1
 	call nc,System_ThrowException
@@ -35,7 +35,7 @@ ConstructDynamicAlphabets: PROC
 
 	; Read hdist
 	ld b,5
-	call Reader_ReadBits_IY
+	call Reader_ReadBits_IX
 	inc a
 	cp DynamicAlphabets_MAX_DISTANCECODELENGTHS + 1
 	call nc,System_ThrowException
@@ -43,7 +43,7 @@ ConstructDynamicAlphabets: PROC
 
 	; Read hclen
 	ld b,4
-	call Reader_ReadBits_IY
+	call Reader_ReadBits_IX
 	add a,4
 	cp DynamicAlphabets_MAX_HEADERCODELENGTHS + 1
 	call nc,System_ThrowException
@@ -66,14 +66,14 @@ Loop:	ld e,(hl)
 	add hl,de
 	push bc
 	ld b,3
-	call Reader_ReadBits_IY
+	call Reader_ReadBits_IX
 	pop bc
 	ld (hl),a
 	pop hl
 	djnz Loop
 
 	; Construct header code alphabet
-	push iy
+	push ix
 	ld bc,DynamicAlphabets_MAX_HEADERCODELENGTHS
 	ld de,headerCodeLengths ; de = length of symbols
 	ld hl,HeaderCodeTree

@@ -312,17 +312,6 @@ Zero:	rlc c
 	ret
 	ENDP
 
-; b = nr of bits to read (1-8)
-; iy = this
-; a <- value
-; Modifies: af, bc
-Reader_ReadBits_IY:
-	push iy
-	ex (sp),ix
-	call Reader_ReadBits_IX
-	pop ix
-	ret
-
 ; ix = this
 Reader_Align:
 	xor a
