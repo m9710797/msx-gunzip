@@ -1,5 +1,5 @@
-CALSLT: equ 1CH
-CHPUT: equ 0A2H
-EXPTBL: equ 0FCC1H
+CALSLT:	equ 1CH
+CHPUT:	equ 0A2H
+EXPTBL:	equ 0FCC1H
 
-BDOS:     equ 5H
+BDOS:	equ 5H

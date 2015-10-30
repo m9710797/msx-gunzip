@@ -2,106 +2,59 @@
 ; System routines
 ;
 
-; a = character
-; Modifies: none
-System_PrintChar:
-	exx
-	ex af,af'
-	push af
-	push bc
-	push de
-	push hl
-	ex af,af'
-	exx
-	push ix
-	push iy
-	ld iy,(EXPTBL-1)
-	ld ix,CHPUT
-	call CALSLT
-	ei
-	pop iy
-	pop ix
-	exx
-	ex af,af'
-	pop hl
-	pop de
-	pop bc
-	pop af
-	ex af,af'
-	exx
-	ret
-
-; hl = string (0-terminated)
-; Modifies: none
-System_Print:
-	push af
-	push hl
-System_Print_Loop:
-	ld a,(hl)
-	and a
-	jp z,System_Print_Done
-	call System_PrintChar
-	inc hl
-	jp System_Print_Loop
-System_Print_Done:
-	pop hl
-	pop af
-	ret
-
-; hl = string (0-terminated)
-; Modifies: none
-System_PrintLn:
-	call System_Print
-	push hl
-	ld hl,System_crlf
-	call System_Print
-	pop hl
-	ret
-
 ; hl = value
-; Modifies: none
 System_PrintHexHL:
-	push af
 	ld a,h
+	push hl
 	call System_PrintHexA
+	pop hl
 	ld a,l
-	call System_PrintHexA
-	pop af
-	ret
+	;jr System_PrintHexA
 
 ; a = value
-; Modifies: none
 System_PrintHexA:
 	push af
 	rrca
 	rrca
 	rrca
 	rrca
-	and 0FH
 	call System_PrintHex
 	pop af
-	and 0FH
-	call System_PrintHex
-	ret
+	;jr System_PrintHex
 
 ; a = value (0 - 15)
-; Modifies: none
 System_PrintHex:
-	push af
-	call System_NibbleToHexDigit
-	call System_PrintChar
-	pop af
-	ret
-
-; a = value (0 - 15)
-; a <- hexadecimal character
-; Modifies: a
-System_NibbleToHexDigit:
+	and 0FH
 	cp 10
 	ccf
 	adc a,"0"
 	daa
-	ret
+	;jr System_PrintChar
+
+; a = character
+System_PrintChar:
+	ld iy,(EXPTBL-1)
+	ld ix,CHPUT
+	jp CALSLT
+
+; hl = string (0-terminated)
+System_PrintLn:
+	call System_Print
+System_PrintCrLf:
+	ld hl,System_crlf
+	;jr System_Print
+
+; hl = string (0-terminated)
+; Modifies: none
+System_Print:
+	ld a,(hl)
+	inc hl
+	and a
+	ret z
+	push hl
+	call System_PrintChar
+	pop hl
+	jr System_Print
 
 System_ThrowException:
 	IF DEBUG
@@ -133,10 +86,9 @@ System_PrintExceptionMessage:
 	dec hl
 	dec hl
 	call System_PrintHexHL
-	ld hl,System_crlf
-	jp System_Print
+	jr System_PrintCrLf
 
-;
+
 System_exceptionMessage:
 	db "An exception occurred on address: ", 0
 
