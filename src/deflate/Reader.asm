@@ -78,7 +78,7 @@ NextBlock:
 	ret z
 TrapNextRead:
 	ld (ix + Reader.bufferPosition),0FFH
-	ld a,(IBUFFER_END >> 8) - 1
+	ld a,IBUFFER_END_HIGH - 1
 	ret
 	ENDP
 

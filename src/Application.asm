@@ -50,16 +50,12 @@ skip_print:
 
 	; Create FileReader
 	ld de,(cli_archivePath)
-	ld hl,IBUFFER
-	ld bc,IBUFFER_SIZE
 	call Reader_class.New
 	call Reader_Construct
 	push de
 	
 	; Create FileWriter
 	ld de,(cli_outputPath)
-	ld hl,OBUFFER
-	ld bc,OBUFFER_SIZE
 	call Writer_class.New
 	call Writer_Construct
 

@@ -11,12 +11,6 @@ Writer: MACRO
 		ret nz
 		jp Writer_Write_IY.Continue
 
-	bufferStart:
-		dw 0
-	bufferSize:
-		dw 0
-	bufferEnd:
-		dw 0
 	count:
 		dd 0
 	crc32:
@@ -30,8 +24,6 @@ Writer_class: Class Writer, Writer_template, Heap_main
 Writer_template: Writer
 
 ; de = file path
-; hl = buffer start
-; bc = buffer size
 ; ix = this
 ; ix <- this
 ; de <- this
@@ -39,15 +31,9 @@ Writer_Construct:
 	ld a,l  ; check if buffer is 256-byte aligned
 	or c
 	call nz,System_ThrowException
-	ld (ix + Writer.bufferStart),l
-	ld (ix + Writer.bufferStart + 1),h
-	ld (ix + Writer.bufferSize),c
-	ld (ix + Writer.bufferSize + 1),b
+	ld hl,OBUFFER
 	ld (ix + Writer.bufferPosition),l
 	ld (ix + Writer.bufferPosition + 1),h
-	add hl,bc
-	ld (ix + Writer.bufferEnd),l
-	ld (ix + Writer.bufferEnd + 1),h
 
 	ld (ix + Writer.fileHandle),0FFH	; invalid file handle
 	ld a,d
@@ -83,7 +69,7 @@ Continue:
 	push af
 	ld a,(iy + Writer.bufferPosition + 1)
 	inc a
-	cp (iy + Writer.bufferEnd + 1)
+	cp OBUFFER_END >> 8
 	call z,NextBlock
 	ld (iy + Writer.bufferPosition + 1),a
 	pop af
@@ -109,12 +95,11 @@ Writer_Copy_IY: PROC
 	sbc hl,de
 	ld a,h
 	jr c,Wrap
-	cp (iy + Writer.bufferStart + 1)
+	cp OBUFFER >> 8
 	jr c,Wrap
 WrapContinue:
 	pop de
-	ld a,(iy + Writer.bufferEnd + 1)
-	sub 3
+	ld a,OBUFFER_END_HIGH - 3
 	cp h  ; does the source have a 512 byte margin without wrapping?
 	jr c,Writer_Copy_Slow_IY
 	cp d  ; does the destination a 512 byte margin without wrapping?
@@ -126,7 +111,7 @@ WrapContinue:
 	ld (iy + Writer.bufferPosition + 1),d
 	ret
 Wrap:
-	add a,(iy + Writer.bufferSize + 1)
+	add a,OBUFFER_SIZE >> 8
 	ld h,a
 	jp WrapContinue
 	ENDP
@@ -142,13 +127,12 @@ Writer_Copy_Slow_IY: PROC
 	add hl,bc
 	jr c,Split
 	ld a,h
-	cp (iy + Writer.bufferEnd + 1)
+	cp OBUFFER_END >> 8
 	jp c,Writer_WriteBlock_IY
 ; hl = end address
 Split:
 	push bc
-	ld c,(iy + Writer.bufferEnd)
-	ld b,(iy + Writer.bufferEnd + 1)
+	ld bc,OBUFFER_END
 	and a
 	sbc hl,bc  ; hl = bytes past end
 	ex (sp),hl
@@ -159,8 +143,7 @@ Split:
 	ld b,h
 	call Writer_WriteBlock_IY
 	pop bc
-	ld l,(iy + Writer.bufferStart)
-	ld h,(iy + Writer.bufferStart + 1)
+	ld hl,OBUFFER
 	ld a,b
 	or c
 	jp nz,Writer_Copy_Slow_IY
@@ -177,7 +160,7 @@ Writer_WriteBlock_IY: PROC
 	add hl,bc
 	jr c,Split
 	ld a,h
-	cp (iy + Writer.bufferEnd + 1)
+	cp OBUFFER_END >> 8
 	jr nc,Split
 	and a
 	sbc hl,bc
@@ -189,8 +172,7 @@ Writer_WriteBlock_IY: PROC
 ; hl = end address
 Split:
 	push bc
-	ld c,(iy + Writer.bufferEnd)
-	ld b,(iy + Writer.bufferEnd + 1)
+	ld bc,OBUFFER_END
 	and a
 	sbc hl,bc  ; hl = bytes past end
 	ld c,l
@@ -219,12 +201,6 @@ Split:
 ; hl <- buffer position
 ; Modifies: af
 Writer_FinishBlock:
-	ld a,(ix + Writer.bufferPosition)
-	cp (ix + Writer.bufferEnd)
-	call nz,System_ThrowException
-	ld a,(ix + Writer.bufferPosition + 1)
-	cp (ix + Writer.bufferEnd + 1)
-	call nz,System_ThrowException
 	push bc
 	push de
 	call Writer_IncreaseCount
@@ -232,8 +208,7 @@ Writer_FinishBlock:
 	call Writer_FlushBuffer
 	pop de
 	pop bc
-	ld l,(ix + Writer.bufferStart)
-	ld h,(ix + Writer.bufferStart + 1)
+	ld hl,OBUFFER
 	ld (ix + Writer.bufferPosition),l
 	ld (ix + Writer.bufferPosition + 1),h
 	ret
@@ -256,8 +231,7 @@ Writer_FlushBuffer:
 	ld a,b
 	inc a
 	ret z
-	ld e,(ix + Writer.bufferStart)
-	ld d,(ix + Writer.bufferStart + 1)
+	ld de,OBUFFER
 	ld l,(ix + Writer.bufferPosition)
 	ld h,(ix + Writer.bufferPosition + 1)
 	and a
@@ -270,8 +244,7 @@ Writer_FlushBuffer:
 Writer_IncreaseCount:
 	ld l,(ix + Writer.count)
 	ld h,(ix + Writer.count + 1)
-	ld c,(ix + Writer.bufferSize)
-	ld b,(ix + Writer.bufferSize + 1)
+	ld bc,OBUFFER_SIZE
 	add hl,bc
 	ld (ix + Writer.count),l
 	ld (ix + Writer.count + 1),h
@@ -286,8 +259,7 @@ Writer_IncreaseCount:
 Writer_GetCount:
 	ld l,(ix + Writer.bufferPosition)
 	ld h,(ix + Writer.bufferPosition + 1)
-	ld c,(ix + Writer.bufferStart)
-	ld b,(ix + Writer.bufferStart + 1)
+	ld bc,OBUFFER
 	and a
 	sbc hl,bc
 	call c,System_ThrowException
@@ -307,10 +279,8 @@ Writer_UpdateCRC32:
 	exx
 	push bc
 	push hl
-	ld l,(ix + Writer.bufferStart)
-	ld h,(ix + Writer.bufferStart + 1)
-	ld c,(ix + Writer.bufferSize)
-	ld b,(ix + Writer.bufferSize + 1)
+	ld hl,OBUFFER
+	ld bc,OBUFFER_SIZE
 	exx
 	ld e,(ix + Writer.crc32)
 	ld d,(ix + Writer.crc32 + 1)
@@ -336,8 +306,7 @@ Writer_GetCRC32:
 	push hl
 	ld l,(ix + Writer.bufferPosition)
 	ld h,(ix + Writer.bufferPosition + 1)
-	ld c,(ix + Writer.bufferStart)
-	ld b,(ix + Writer.bufferStart + 1)
+	ld bc,OBUFFER
 	and a
 	sbc hl,bc
 	call c,System_ThrowException

@@ -41,9 +41,6 @@ Archive_template: Archive
 Archive_Construct:
 	ld iyl,e  ; check if write buffer is at least 32K
 	ld iyh,d
-	ld a,(iy + Writer.bufferSize + 1)
-	cp 80H
-	call c,System_ThrowException
 	ld (ix + Archive.reader),l
 	ld (ix + Archive.reader + 1),h
 	ld (ix + Archive.writer),e
