@@ -4,7 +4,7 @@
 WriterObject:
 ; a = value
 ; iy = this
-	ld (0),a
+	ld (OBUFFER),a
 Writer_bufPos: equ $ - 2
 	inc (iy + Writer_bufPosOfst)
 	ret nz
@@ -23,9 +23,6 @@ Writer_fileHandle:
 
 ; de = file path
 Writer_Construct:
-	ld a,l  ; check if buffer is 256-byte aligned
-	or c
-	call nz,System_ThrowException
 	ld hl,OBUFFER
 	ld (Writer_bufPos),hl
 
@@ -35,7 +32,6 @@ Writer_Construct:
 	ld a,00000010B  ; write only
 	ld bc,0 * 256 + 44H ; _CREATE
 	call BDOS
-
 	call Application_CheckDOSError
 	ld a,b
 	ld (Writer_fileHandle),a
@@ -60,27 +56,24 @@ Continue:
 	push af
 	ld a,(Writer_bufPos + 1)
 	inc a
-	cp OBUFFER_END >> 8
-	call z,NextBlock
 	ld (Writer_bufPos + 1),a
+	cp OBUFFER_END >> 8
+	jr z,NextBlock
 	pop af
 	ret
 NextBlock:
-	ld (Writer_bufPos + 1),a
 	push hl
 	call Writer_FinishBlock
 	pop hl
-	ld a,(Writer_bufPos + 1)
+	pop af
 	ret
 	ENDP
 
 ; bc = byte count (range 3-258)
 ; de = distance - 1
-; iy = this
 ; Modifies: af, bc, de, hl
 Writer_Copy: PROC
 	ld hl,(Writer_bufPos)
-	push hl
 	scf
 	sbc hl,de
 	ld a,h
@@ -88,10 +81,10 @@ Writer_Copy: PROC
 	cp OBUFFER >> 8
 	jr c,Wrap
 WrapContinue:
-	pop de
 	ld a,OBUFFER_END_HIGH - 3
 	cp h  ; does the source have a 512 byte margin without wrapping?
 	jr c,Writer_Copy_Slow
+	ld de,(Writer_bufPos) ; reload, faster than push/pop
 	cp d  ; does the destination a 512 byte margin without wrapping?
 	jr c,Writer_Copy_Slow
 	ldi
@@ -182,19 +175,48 @@ Split:
 	ret
 	ENDP
 
-; hl <- buffer position
-; Modifies: af
-Writer_FinishBlock:
+Writer_FinishBlock: PROC
 	push bc
 	push de
-	call Writer_IncreaseCount
-	call Writer_UpdateCRC32
+
+	; Increase count
+	; (Writer_count + 0) does not change
+	ld hl,(Writer_count + 1)
+	ld bc,OBUFFER_SIZE >> 8
+	add hl,bc
+	ld (Writer_count + 1),hl
+	jr c,inc_16mb
+inc_16mb_end:
+
+	; Update CRC32
+	exx
+	push bc
+	push hl
+	ld hl,OBUFFER
+	ld bc,OBUFFER_SIZE
+	exx
+	ld de,(Writer_crc32 + 0)
+	ld bc,(Writer_crc32 + 2)
+	call Writer_CalculateCRC32
+	ld (Writer_crc32 + 0),de
+	ld (Writer_crc32 + 2),bc
+	exx
+	pop hl
+	pop bc
+	exx
+
 	call Writer_FlushBuffer
 	pop de
 	pop bc
 	ld hl,OBUFFER
 	ld (Writer_bufPos),hl
 	ret
+
+inc_16mb:
+	ld hl,Writer_count + 3
+	inc (hl)
+	jr inc_16mb_end
+	ENDP
 
 ; Modifies: af, bc, de, hl
 Writer_FlushBuffer:
@@ -214,16 +236,6 @@ Writer_FlushBuffer:
 	jp Application_CheckDOSError
 
 ; Modifies: hl, bc
-Writer_IncreaseCount:
-	ld hl,(Writer_count + 0)
-	ld bc,OBUFFER_SIZE
-	add hl,bc
-	ld (Writer_count + 0),hl
-	ret nc
-	ld hl,(Writer_count + 2)
-	inc hl
-	ld (Writer_count + 2),hl
-	ret
 
 ; dehl <- count bytes written
 Writer_GetCount:
@@ -238,42 +250,16 @@ Writer_GetCount:
 	inc de
 	ret
 
-; a = value
-; Modifies: af, bc, de, hl
-Writer_UpdateCRC32:
-	exx
-	push bc
-	push hl
-	ld hl,OBUFFER
-	ld bc,OBUFFER_SIZE
-	exx
-	ld de,(Writer_crc32 + 0)
-	ld bc,(Writer_crc32 + 2)
-	call Writer_CalculateCRC32
-	ld (Writer_crc32 + 0),de
-	ld (Writer_crc32 + 2),bc
-	exx
-	pop hl
-	pop bc
-	exx
-	ret
-
 ; bcde <- crc32
 ; Modifies: af, bc, de, hl
 Writer_GetCRC32:
 	exx
 	push bc
 	push hl
-	ld hl,(Writer_bufPos)
-	ld bc,OBUFFER
-	and a
-	sbc hl,bc
-	call c,System_ThrowException
-	ld a,l
-	ld l,c
-	ld c,a
-	ld a,h
-	ld h,b
+	ld hl,OBUFFER
+	ld bc,(Writer_bufPos)
+	ld a,b
+	sub h
 	ld b,a
 	exx
 	ld de,(Writer_crc32 + 0)
@@ -297,8 +283,7 @@ Writer_CalculateCRC32: PROC
 	inc b
 	ld c,b
 	ld b,a
-Loop:
-	ld a,(hl)
+Loop:	ld a,(hl)
 	inc hl
 	exx
 	xor e
