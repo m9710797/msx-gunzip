@@ -3,9 +3,20 @@
 ;
 
 Application_Main:
-	call DOS_IsDOS2
+	; check for DOS2
+	xor a
+	ld b,a
+	ld c,a
+	ld d,a
+	ld e,a
+	ld c,6FH ; _DOSVER
+	call BDOS
 	ld hl,Application_dos2RequiredError
-	jp c,Application_TerminateWithError
+	add a,-1
+	jr c,Application_TerminateWithError
+	ld a,b
+	cp 2
+	jr c,Application_TerminateWithError
 
 	; Check if the stack is well above the heap
 	ld hl,-(MEMORY_END + STACK_SIZE)
@@ -66,15 +77,19 @@ Application_CheckDOSError:
 Application_TerminateWithDOSError:
 	ld b,a
 	ld de,scratch_buf
-	call DOS_ExplainErrorCode
+	ld c,66H ; _EXPLAIN
+	call BDOS
 	ld hl,scratch_buf
 	call System_PrintLn
-	jp DOS_Terminate
+	jr DOS_Terminate
 
 ; hl <- message
 Application_TerminateWithError:
 	call System_Print
-	jp DOS_Terminate
+
+DOS_Terminate:
+	ld bc,1 * 256 + 62H ; _TERM
+	jp BDOS
 
 ;
 Application_welcome:

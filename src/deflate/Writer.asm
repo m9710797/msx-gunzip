@@ -33,8 +33,9 @@ Writer_Construct:
 	or e
 	ret z
 	ld a,00000010B  ; write only
-	ld b,0
-	call DOS_CreateFileHandle
+	ld bc,0 * 256 + 44H ; _CREATE
+	call BDOS
+
 	call Application_CheckDOSError
 	ld a,b
 	ld (Writer_fileHandle),a
@@ -46,7 +47,8 @@ Writer_Destruct:
 	ld b,a
 	inc a
 	ret z
-	call DOS_CloseFileHandle
+	ld c,45H ; _CLOSE
+	call BDOS
 	jp Application_CheckDOSError
 
 ; a = value
@@ -196,7 +198,9 @@ Writer_FinishBlock:
 
 ; Modifies: af, bc, de, hl
 Writer_FlushBuffer:
-	call DOS_ConsoleStatus  ; allow ctrl-c
+	ld c,0BH ; _CONST
+	call BDOS
+
 	ld a,(Writer_fileHandle)
 	ld b,a
 	inc a
@@ -205,7 +209,8 @@ Writer_FlushBuffer:
 	ld hl,(Writer_bufPos)
 	and a
 	sbc hl,de
-	call DOS_WriteToFileHandle
+	ld c,49H ; _WRITE
+	call BDOS
 	jp Application_CheckDOSError
 
 ; Modifies: hl, bc

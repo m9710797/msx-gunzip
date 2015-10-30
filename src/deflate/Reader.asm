@@ -30,7 +30,9 @@ Reader_Construct:
 	ld (Reader_bufPos),hl
 
 	ld a,00000001B  ; read only
-	call DOS_OpenFileHandle
+	ld c,43H; _OPEN
+	call BDOS
+
 	call Application_CheckDOSError
 	ld a,b
 	ld (Reader_fileHandle),a
@@ -40,7 +42,8 @@ Reader_Construct:
 Reader_Destruct:
 	ld a,(Reader_fileHandle)
 	ld b,a
-	call DOS_CloseFileHandle
+	ld c,45H ; _CLOSE
+	call BDOS
 	jp Application_CheckDOSError
 
 ; ix = this
@@ -82,13 +85,13 @@ TrapNextRead:
 
 ; Modifies: af, bc, de, hl
 Reader_FillBuffer: PROC
-	call DOS_ConsoleStatus  ; allow ctrl-c
 	ld a,(Reader_fileHandle)
 	ld b,a
 	ld de,IBUFFER
 	ld hl,IBUFFER_SIZE
-	call DOS_ReadFromFileHandle
-	cp .EOF
+	ld c,48H ; _READ
+	call BDOS
+	cp 0C7H ; .EOF
 	jp nz,Application_CheckDOSError
 	;jp Reader_MarkEndOfData
 	ENDP

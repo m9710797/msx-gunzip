@@ -15,8 +15,8 @@ cli_buffer:
 ParseCLI: PROC
 	ld de,cli_buffer
 	ld hl,CLI_parametersEnvName
-	ld b,255
-	call DOS_GetEnvironmentItem
+	ld bc,255 * 256 + 6BH ; _GENV
+	call BDOS
 
 	ld de,cli_buffer
 Loop:
@@ -57,7 +57,8 @@ Path:
 	jr nz,OutputPath
 	ld (cli_archivePath),de
 ParsePath:
-	call DOS_ParsePathname
+	ld c,5BH ; _PARSE
+	call BDOS
 	ld a,(de)
 	and a
 	ret z

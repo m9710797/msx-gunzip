@@ -18,7 +18,6 @@ STACK_SIZE: equ 100H
 COM_Main:
 	jp Application_Main
 
-	INCLUDE "DOS.asm"
 	INCLUDE "BIOS.asm"
 	INCLUDE "System.asm"
 	INCLUDE "Application.asm"
