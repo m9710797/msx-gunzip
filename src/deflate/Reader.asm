@@ -11,12 +11,6 @@ Reader: MACRO
 		ret nz
 		jp Reader_Read.Continue
 
-	bufferStart:
-		dw 0
-	bufferSize:
-		dw 0
-	bufferEnd:
-		dw 0
 	endOfData:
 		db 0
 	bits:
@@ -30,24 +24,13 @@ Reader_class: Class Reader, Reader_template, Heap_main
 Reader_template: Reader
 
 ; de = file path
-; hl = buffer start
-; bc = buffer size
 ; ix = this
 ; ix <- this
 ; de <- this
 Reader_Construct:
-	ld a,l  ; check if buffer is 256-byte aligned
-	or c
-	call nz,System_ThrowException
-	ld (ix + Reader.bufferStart),l
-	ld (ix + Reader.bufferStart + 1),h
-	ld (ix + Reader.bufferSize),c
-	ld (ix + Reader.bufferSize + 1),b
+	ld hl,IBUFFER
 	ld (ix + Reader.bufferPosition),l
 	ld (ix + Reader.bufferPosition + 1),h
-	add hl,bc
-	ld (ix + Reader.bufferEnd),l
-	ld (ix + Reader.bufferEnd + 1),h
 
 	ld a,00000001B  ; read only
 	call DOS_OpenFileHandle
@@ -74,7 +57,7 @@ Continue:
 	push af
 	ld a,(ix + Reader.bufferPosition + 1)
 	inc a
-	cp (ix + Reader.bufferEnd + 1)
+	cp IBUFFER_END >> 8
 	call z,NextBlock
 	ld (ix + Reader.bufferPosition + 1),a
 	pop af
@@ -91,12 +74,11 @@ NextBlock:
 	pop de
 	pop bc
 	bit 0,(ix + Reader.endOfData)
-	ld a,(ix + Reader.bufferStart + 1)
+	ld a,IBUFFER >> 8	; bufferStart
 	ret z
 TrapNextRead:
 	ld (ix + Reader.bufferPosition),0FFH
-	ld a,(ix + Reader.bufferEnd + 1)
-	dec a
+	ld a,(IBUFFER_END >> 8) - 1
 	ret
 	ENDP
 
@@ -105,22 +87,14 @@ TrapNextRead:
 Reader_FillBuffer: PROC
 	call DOS_ConsoleStatus  ; allow ctrl-c
 	ld b,(ix + Reader.fileHandle)
-	ld e,(ix + Reader.bufferStart)
-	ld d,(ix + Reader.bufferStart + 1)
-	ld l,(ix + Reader.bufferEnd)
-	ld h,(ix + Reader.bufferEnd + 1)
-	and a
-	sbc hl,de
+	ld de,IBUFFER
+	ld hl,IBUFFER_SIZE
 	call DOS_ReadFromFileHandle
 	cp .EOF
-	jp z,EndOfFile
-	call Application_CheckDOSError
-	ret
-EndOfFile:
-	call Reader_MarkEndOfData
-	ret
+	jp nz,Application_CheckDOSError
+	;jp Reader_MarkEndOfData
 	ENDP
-; ix = this
+
 Reader_MarkEndOfData:
 	ld (ix + Reader.endOfData),1
 	ret
