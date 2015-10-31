@@ -17,24 +17,24 @@ Archive_crc32:
 
 Archive_Extract:
 	; Read header
-	ld ix,ReaderObject
-	call Reader_Read_IX_slow
+	call Reader_PrepareReadBitInline
+	call Reader_Read_DE_fast
 	cp 31  ; gzip signature (1)
 	ld hl,Archive_notGzipError
 	jp nz,Application_TerminateWithError
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	cp 139  ; gzip signature (1)
 	ld hl,Archive_notGzipError
 	jp nz,Application_TerminateWithError
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	cp 8  ; deflate compression ID (1)
 	ld hl,Archive_notDeflateError
 	jp nz,Application_TerminateWithError
 
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	ld (Archive_flags),a
-	ld bc,6	; skip mtime[4], xfl, os
-	call Reader_Skip_IX
+	ld hl,6	; skip mtime[4], xfl, os
+	call Reader_Skip_DE
 
 	ld a,(Archive_flags)
 	and Archive_RESERVED
@@ -44,11 +44,11 @@ Archive_Extract:
 	ld a,(Archive_flags)
 	and Archive_FEXTRA
 	jr z,no_skip_extra
-	call Reader_Read_IX_slow
-	ld c,a
-	call Reader_Read_IX_slow
-	ld b,a
-	call Reader_Skip_IX
+	call Reader_Read_DE_fast
+	ld l,a
+	call Reader_Read_DE_fast
+	ld h,a
+	call Reader_Skip_DE
 no_skip_extra:
 
 	ld a,(Archive_flags)
@@ -61,30 +61,32 @@ no_skip_extra:
 
 	ld a,(Archive_flags)
 	and Archive_FHCRC
-	ld bc,2
-	call nz,Reader_Skip_IX
+	ld hl,2
+	call nz,Reader_Skip_DE
+	call Reader_FinishReadBitInline
 
 	; actual inflate
 	call Inflate_Inflate
 
 	; verify
-	ld ix,ReaderObject
-	call Reader_Read_IX_slow
+	call Reader_PrepareReadBitInline
+	call Reader_Read_DE_fast
 	ld (Archive_crc32 + 0),a
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	ld (Archive_crc32 + 1),a
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	ld (Archive_crc32 + 2),a
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	ld (Archive_crc32 + 3),a
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	ld (Archive_isize + 0),a
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	ld (Archive_isize + 1),a
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	ld (Archive_isize + 2),a
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	ld (Archive_isize + 3),a
+	call Reader_FinishReadBitInline
 
 	call Archive_VerifyISIZE
 	ld hl,Archive_isizeMismatchError
@@ -97,7 +99,7 @@ no_skip_extra:
 
 
 Archive_SkipZString:
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	and a
 	jr nz,Archive_SkipZString
 	ret

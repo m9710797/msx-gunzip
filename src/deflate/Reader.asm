@@ -6,6 +6,10 @@ Reader_endOfData:
 	db 0
 Reader_fileHandle:
 	db 0FFH
+Reader_bufPos:
+	dw IBUFFER
+Reader_bits:
+	db 0
 
 ;----
 ; de = Reader_bufPos
@@ -50,55 +54,6 @@ EofError:
 	call System_ThrowExceptionWithMessage
 	ENDP
 
-;----
-ReaderObject: equ $
-; ix = this
-; a <- value
-Reader_Read_IX_slow:
-	ld a,(IBUFFER)
-Reader_bufPos: equ $ - 2
-	inc (ix + Reader_bufPosOfst)
-	ret nz
-
-	push af
-	ld a,(Reader_bufPos + 1)
-	inc a
-	cp IBUFFER_END >> 8
-	jr z,NextBlock
-End:	ld (Reader_bufPos + 1),a
-	pop af
-	ret
-NextBlock:
-	push bc
-	push de
-	push hl
-	ld a,(Reader_endOfData)
-	or a
-	jr nz,EofError
-	call Reader_FillBuffer
-	pop hl
-	pop de
-	pop bc
-	ld a,(Reader_endOfData)
-	or a
-	ld a,IBUFFER >> 8	; bufferStart
-	jr z,End
-	; trap next read
-	ld a,0FFH
-	ld (Reader_bufPos),a
-	ld a,IBUFFER_END_HIGH - 1
-	jr End
-EofError:
-	ld hl,Reader_endOfDataError
-	call System_ThrowExceptionWithMessage
-
-Reader_bits:
-	db 0
-;----
-
-Reader_bufPosOfst:    equ Reader_bufPos - ReaderObject
-Reader_bitsOfst:      equ Reader_bits   - ReaderObject
-
 
 ; de = file path
 Reader_Construct:
@@ -132,15 +87,15 @@ Reader_FillBuffer:
 	ld (Reader_endOfData),a	; any non-zero value
 	ret
 
-; bc = nr of bytes to skip
+; hl = nr of bytes to skip
 ; ix = this
 ; Modifies: bc, a
-Reader_Skip_IX:
-	call Reader_Read_IX_slow
-	dec bc
-	ld a,b
-	or c
-	jr nz,Reader_Skip_IX
+Reader_Skip_DE:
+	call Reader_Read_DE_fast
+	dec hl
+	ld a,h
+	or l
+	jr nz,Reader_Skip_DE
 	ret
 
 ; c <- inline bit reader state
