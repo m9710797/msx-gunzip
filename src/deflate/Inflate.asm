@@ -2,14 +2,17 @@
 ; Inflate implementation
 ;
 Inflate_Inflate:
-	ld ix,ReaderObject
-	call Reader_ReadBit_IX
+	call Reader_PrepareReadBitInline
+	call Reader_ReadBitsInline_1_DE
 	push af
-	ld b,2
-	call Reader_ReadBits_IX
+	call Reader_ReadBitsInline_2_DE
+	push af
+	call Reader_FinishReadBitInline
+	pop af
 	call Inflate_InflateBlock
 	pop af
-	jr nc,Inflate_Inflate
+	or a
+	jr z,Inflate_Inflate
 	ret
 
 ; a = block type

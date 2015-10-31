@@ -143,22 +143,6 @@ Reader_Skip_IX:
 	jr nz,Reader_Skip_IX
 	ret
 
-; ix = this
-; f <- c: bit
-; Modifies: none
-Reader_ReadBit_IX:
-	srl (ix + Reader_bitsOfst)
-	ret nz  ; return if sentinel bit is still present
-	push bc
-	ld c,a
-	call Reader_Read_IX_slow
-	scf  ; set sentinel bit
-	rra
-	ld (Reader_bits),a
-	ld a,c
-	pop bc
-	ret
-
 ; c <- inline bit reader state
 ; de <- inline Reader_bufPos
 Reader_PrepareReadBitInline:
@@ -180,7 +164,7 @@ Reader_FinishReadBitInline:
 ; c <- inline bit reader state
 ; f <- c: bit
 ; Modifies: a
-Reader_ReadBitInline_IX: MACRO
+Reader_ReadBitInline_DE: MACRO
 	srl c
 	call z,Reader_ReadBitInline_NextByte_DE  ; if sentinel bit is shifted out
 	ENDM
@@ -338,21 +322,6 @@ Reader_ReadBitsInline_8_DE:
 	Reader_ReadBitInline_B_DE
 	rra
 	ret
-
-; b = nr of bits to read (1-8)
-; ix = this
-; a <- value
-; Modifies: af, bc
-Reader_ReadBits_IX: PROC
-	ld c,1
-	xor a
-Loop:	call Reader_ReadBit_IX
-	jr nc,Zero
-	add a,c
-Zero:	rlc c
-	djnz Loop
-	ret
-	ENDP
 
 ; ix = this
 Reader_Align:
