@@ -109,17 +109,17 @@ Store:	ld (iy + 0),a  ; offset is dynamically changed!
 
 
 ; c = inline bit reader state
-; de = loop counter for nested 8-bit loop
+; de = inline Reader_bufPos
 ; hl = literal/length/distance code lengths position
-; ix = reader
+; ix = loop counter for nested 8-bit loop
 ; iy = header code alphabet root
 DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths:
 	jp iy
 
 ; c = inline bit reader state
-; de = loop counter for nested 8-bit loop
+; de = inline Reader_bufPos
 ; hl = literal/length/distance code lengths position
-; ix = reader
+; ix = loop counter for nested 8-bit loop
 ; iy = header code alphabet root
 DynamicAlphabets_WriteAndNext:
 	inc hl
@@ -132,9 +132,9 @@ DynamicAlphabets_WriteAndNext:
 ; a = fill value
 ; b = repeat count
 ; c = inline bit reader state
-; de = loop counter for nested 8-bit loop
+; de = inline Reader_bufPos
 ; hl = literal/length/distance code lengths position
-; ix = reader
+; ix = loop counter for nested 8-bit loop
 ; iy = header code alphabet root
 DynamicAlphabets_FillAndNext_Loop:
 	dec b
@@ -150,9 +150,9 @@ DynamicAlphabets_FillAndNext:
 
 ; Header code alphabet symbols 0-15
 ; c = inline bit reader state
-; de = loop counter for nested 8-bit loop
+; de = inline Reader_bufPos
 ; hl = literal/length/distance code lengths position
-; ix = reader
+; ix = loop counter for nested 8-bit loop
 ; iy = header code alphabet root
 DynamicAlphabets_WriteLength: REPT 16, ?value
 	ld (hl),?value
@@ -161,9 +161,9 @@ DynamicAlphabets_WriteLength: REPT 16, ?value
 
 ; Header code alphabet symbols 16
 ; c = inline bit reader state
-; de = loop counter for nested 8-bit loop
+; de = inline Reader_bufPos
 ; hl = literal/length/distance code lengths position
-; ix = reader
+; ix = loop counter for nested 8-bit loop
 ; iy = header code alphabet root
 DynamicAlphabets_Copy:
 	call Reader_ReadBitsInline_2_DE
@@ -176,9 +176,9 @@ DynamicAlphabets_Copy:
 
 ; Header code alphabet symbols 17
 ; c = inline bit reader state
-; de = loop counter for nested 8-bit loop
+; de = inline Reader_bufPos
 ; hl = literal/length/distance code lengths position
-; ix = reader
+; ix = loop counter for nested 8-bit loop
 ; iy = header code alphabet root
 DynamicAlphabets_FillZero_3:
 	call Reader_ReadBitsInline_3_DE
@@ -189,9 +189,9 @@ DynamicAlphabets_FillZero_3:
 
 ; Header code alphabet symbols 18
 ; c = inline bit reader state
-; de = loop counter for nested 8-bit loop
+; de = inline Reader_bufPos
 ; hl = literal/length/distance code lengths position
-; ix = reader
+; ix = loop counter for nested 8-bit loop
 ; iy = header code alphabet root
 DynamicAlphabets_FillZero_11:
 	call Reader_ReadBitsInline_7_DE

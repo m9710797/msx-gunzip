@@ -34,9 +34,9 @@ Writer_Destruct:
 	call BDOS
 	jp Application_CheckDOSError
 
-WriterObject:
 ; a = value
 ; hl = Writer_bufPos
+Writer_Write_AndNext:
 	ld (hl),a
 	inc l
 	jp nz,LiteralTree

@@ -88,7 +88,6 @@ Reader_FillBuffer:
 	ret
 
 ; hl = nr of bytes to skip
-; ix = this
 ; Modifies: bc, a
 Reader_Skip_DE:
 	call Reader_Read_DE_fast
@@ -278,7 +277,6 @@ Reader_ReadBitsInline_8_DE:
 	rra
 	ret
 
-; ix = this
 Reader_Align:
 	xor a
 	ld (Reader_bits),a

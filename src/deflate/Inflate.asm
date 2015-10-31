@@ -77,7 +77,7 @@ Inflate_InflateFixedCompressed:
 Inflate_InflateDynamicCompressed:
 	call ConstructDynamicAlphabets
 Inflate_DoInflate:
-	ld iy,WriterObject
+	ld iy,Writer_Write_AndNext
 	call Reader_PrepareReadBitInline
 	ld hl,(Writer_bufPos)
 	call LiteralTree
@@ -86,24 +86,24 @@ Inflate_DoInflate:
 
 ; Literal/length alphabet symbols 0-255
 ; c = inline bit reader state
-; ix = reader
-; iy = writer
+; de = inline Reader_bufPos
+; iy = Writer_Write_AndNext
 Inflate_WriteLiteral: REPT 256, ?value
 	ld a,?value
-	jp iy ; Writer_Write_IY_AndNext
+	jp iy ; Writer_Write_AndNext
 	ENDM
 
 ; Literal/length alphabet symbol 256
 ; c = inline bit reader state
-; ix = reader
-; iy = writer
+; de = inline Reader_bufPos
+; iy = Writer_Write_AndNext
 Inflate_EndBlock:
 	ret
 
 ; Literal/length alphabet symbols 257-285
 ; c = inline bit reader state
-; ix = reader
-; iy = writer
+; de = inline Reader_bufPos
+; iy = Writer_Write_AndNext
 Inflate_CopyLength.0:
 	exx
 	ld bc,3
@@ -237,8 +237,8 @@ Inflate_CopyLength.28:
 
 ; a = length
 ; c' = inline bit reader state
-; ix = reader
-; iy = writer
+; de = inline Reader_bufPos
+; iy = Writer_Write_AndNext
 Inflate_DecodeDistance_SetLength:
 	exx
 	ld c,a
@@ -250,8 +250,8 @@ Inflate_DecodeDistance_SetLength_0:
 ; Distance alphabet symbols 0-29
 ; c = inline bit reader state
 ; bc = length
-; ix = reader
-; iy = writer
+; de = inline Reader_bufPos
+; iy = Writer_Write_AndNext
 Inflate_CopyDistance.0:
 	push hl
 	exx
@@ -413,8 +413,8 @@ Inflate_CopyDistance.29:
 ; a = distance - 1
 ; bc = length
 ; c' = inline bit reader state
-; ix = reader
-; iy = writer
+; de = inline Reader_bufPos
+; iy = Writer_Write_AndNext
 Inflate_CopyAndNext_SetSmallDistance:
 	push hl
 	exx
@@ -426,8 +426,8 @@ Inflate_CopyAndNext_SetSmallDistance:
 ; a' = distance - 1 LSB
 ; bc = length
 ; c' = inline bit reader state
-; ix = reader
-; iy = writer
+; de = inline Reader_bufPos
+; iy = Writer_Write_AndNext
 Inflate_CopyAndNext_SetBigDistance:
 	push hl
 	exx
