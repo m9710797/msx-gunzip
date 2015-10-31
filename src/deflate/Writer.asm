@@ -196,6 +196,21 @@ Split:
 	ret
 	ENDP
 
+; a = value
+Writer_Write_slow:
+	ld hl,(Writer_bufPos)
+	ld (hl),a
+	inc l
+	ld a,l
+	ld (Writer_bufPos),a
+	ret nz
+	inc h
+	ld a,h
+	ld (Writer_bufPos + 1),a
+	cp OBUFFER_END >> 8
+	ret nz
+	;jp Writer_FinishBlock
+
 Writer_FinishBlock: PROC
 	push bc
 	push de

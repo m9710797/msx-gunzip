@@ -44,9 +44,8 @@ Inflate_InflateUncompressed: PROC
 	dec de
 	inc d
 	ld c,d
-	ld iy,WriterObject
 Loop:	call Reader_Read_IX
-	call Writer_Write_IY
+	call Writer_Write_slow
 	djnz Loop
 	dec c
 	jr nz,Loop
