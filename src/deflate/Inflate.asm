@@ -93,18 +93,8 @@ Inflate_DecodeLiteralLength:
 ; iy = writer
 Inflate_WriteLiteral: REPT 256, ?value
 	ld a,?value
-	jp Inflate_WriteAndNext
+	jp iy ; Writer_Write_IY_AndNext
 	ENDM
-
-; a = value
-; c = inline bit reader state
-; hl = literal/length alphabet root
-; de = distance alphabet root
-; ix = reader
-; iy = writer
-Inflate_WriteAndNext:
-	call Writer_Write_IY
-	jp hl  ; jp Inflate_DecodeLiteralLength
 
 ; Literal/length alphabet symbol 256
 ; c = inline bit reader state

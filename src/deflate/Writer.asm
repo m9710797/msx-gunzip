@@ -7,8 +7,8 @@ WriterObject:
 	ld (OBUFFER),a
 Writer_bufPos: equ $ - 2
 	inc (iy + Writer_bufPosOfst)
-	ret nz
-	jp Writer_Write_IY.Continue
+	jr z,Writer_Write_IY_AndNext.Continue
+	jp hl
 
 Writer_bufPosOfst: equ Writer_bufPos - WriterObject
 
@@ -50,23 +50,20 @@ Writer_Destruct:
 ; a = value
 ; iy = this
 ; Modifies: none
-Writer_Write_IY: PROC
-	jp iy
+Writer_Write_IY_AndNext: PROC
+	;jp iy
 Continue:
-	push af
 	ld a,(Writer_bufPos + 1)
 	inc a
 	ld (Writer_bufPos + 1),a
 	cp OBUFFER_END >> 8
 	jr z,NextBlock
-	pop af
-	ret
+	jp hl
 NextBlock:
 	push hl
 	call Writer_FinishBlock
 	pop hl
-	pop af
-	ret
+	jp hl
 	ENDP
 
 ; bc = byte count (range 3-258)
