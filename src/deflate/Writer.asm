@@ -1,18 +1,6 @@
 ;
 ; Memory buffer writer
 
-WriterObject:
-; a = value
-; iy = this
-	ld (OBUFFER),a
-Writer_bufPos: equ $ - 2
-	inc (iy + Writer_bufPosOfst)
-	jr z,Writer_Write_IY_AndNext.Continue
-	jp hl
-
-Writer_bufPosOfst: equ Writer_bufPos - WriterObject
-
-
 Writer_count:
 	dd 0
 Writer_crc32:
@@ -47,23 +35,32 @@ Writer_Destruct:
 	call BDOS
 	jp Application_CheckDOSError
 
+WriterObject:
+; a = value
+; iy = this
+	ld (OBUFFER),a
+Writer_bufPos: equ $ - 2
+	inc (iy + Writer_bufPosOfst)
+	jp nz,LiteralTree
+	;jr Writer_Write_IY_AndNext.Continue
+
+Writer_bufPosOfst: equ Writer_bufPos - WriterObject
+
+
 ; a = value
 ; iy = this
 ; Modifies: none
 Writer_Write_IY_AndNext: PROC
-	;jp iy
 Continue:
 	ld a,(Writer_bufPos + 1)
 	inc a
 	ld (Writer_bufPos + 1),a
 	cp OBUFFER_END >> 8
-	jr z,NextBlock
-	jp hl
-NextBlock:
-	push hl
+	jp nz,LiteralTree
+	push hl ;;;
 	call Writer_FinishBlock
-	pop hl
-	jp hl
+	pop hl  ;;;
+	jp LiteralTree
 	ENDP
 
 ; bc = byte count (range 3-258)
@@ -74,7 +71,7 @@ NextBlock:
 ; ix = reader
 ; iy = writer
 ; Modifies: af, bc, de, hl
-; Remark: does not return, instead does 'exx ; ex de,hl ; jp hl'
+; Remark: does not return, instead does 'exx ; ex de,hl ; jp LiteralTree'
 Writer_Copy_AndNext: PROC
 	ld hl,(Writer_bufPos)
 	scf
@@ -98,7 +95,7 @@ WrapContinue:
 	; and next
 	exx
 	ex de,hl
-	jp hl  ; jp Inflate_DecodeLiteralLength
+	jp LiteralTree
 
 Wrap:	add a,OBUFFER_SIZE >> 8
 	ld h,a
@@ -139,7 +136,7 @@ Split:
 	; and next
 	exx
 	ex de,hl
-	jp hl  ; jp Inflate_DecodeLiteralLength
+	jp LiteralTree
 	ENDP
 
 
@@ -148,7 +145,7 @@ Writer_WriteBlock_AndNext:
 	; and next
 	exx
 	ex de,hl
-	jp hl  ; jp Inflate_DecodeLiteralLength
+	jp LiteralTree
 
 ; bc = byte count
 ; de = source

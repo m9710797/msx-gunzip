@@ -69,21 +69,12 @@ Inflate_InflateFixedCompressed:
 Inflate_InflateDynamicCompressed:
 	call ConstructDynamicAlphabets
 Inflate_DoInflate:
-	ld hl,LiteralTree
 	ld de,DistanceTree
 	ld ix,ReaderObject
 	ld iy,WriterObject
 	call Reader_PrepareReadBitInline
-	call Inflate_DecodeLiteralLength
+	call LiteralTree
 	jp Reader_FinishReadBitInline
-
-; c = inline bit reader state
-; hl = literal/length alphabet root
-; de = distance alphabet root
-; ix = reader
-; iy = writer
-Inflate_DecodeLiteralLength:
-	jp hl
 
 ; Literal/length alphabet symbols 0-255
 ; c = inline bit reader state
