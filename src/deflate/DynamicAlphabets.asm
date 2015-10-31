@@ -70,7 +70,6 @@ Store:	ld (iy + 0),a  ; offset is dynamically changed!
 	djnz Loop
 
 	; Construct header code alphabet
-	push ix
 	ld bc,DynamicAlphabets_MAX_HEADERCODELENGTHS
 	ld de,headerCodeLengths ; de = length of symbols
 	ld hl,HeaderCodeTree
@@ -80,15 +79,11 @@ Store:	ld (iy + 0),a  ; offset is dynamically changed!
 
 	; Read literal length distance code lengths
 	ld hl,literalLengthDistanceCodeLengths
-	ld a,(hdist) ; LSB
-	ld de,(hlit)
-	add a,e	; cannot overflow
-	ld e,a
-	inc d	; +1 for nested 8-bit loop
+	ld bc,(hdist)
+	ld ix,(hlit)
+	add ix,bc
+	inc ixh	; +1 for nested 8-bit loop
 	pop iy	; iy = HeaderCodeTree
-	pop ix	; ix = reader
-	ld ixh,d ;;;;
-	ld ixl,e ;;;;
 	call Reader_PrepareReadBitInline
 	call DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths
 	call Reader_FinishReadBitInline
