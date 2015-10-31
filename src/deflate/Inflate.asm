@@ -69,7 +69,6 @@ Inflate_InflateFixedCompressed:
 Inflate_InflateDynamicCompressed:
 	call ConstructDynamicAlphabets
 Inflate_DoInflate:
-	ld de,DistanceTree
 	ld ix,ReaderObject
 	ld iy,WriterObject
 	call Reader_PrepareReadBitInline
@@ -78,8 +77,6 @@ Inflate_DoInflate:
 
 ; Literal/length alphabet symbols 0-255
 ; c = inline bit reader state
-; hl = literal/length alphabet root
-; de = distance alphabet root
 ; ix = reader
 ; iy = writer
 Inflate_WriteLiteral: REPT 256, ?value
@@ -89,8 +86,6 @@ Inflate_WriteLiteral: REPT 256, ?value
 
 ; Literal/length alphabet symbol 256
 ; c = inline bit reader state
-; hl = literal/length alphabet root
-; de = distance alphabet root
 ; ix = reader
 ; iy = writer
 Inflate_EndBlock:
@@ -98,8 +93,6 @@ Inflate_EndBlock:
 
 ; Literal/length alphabet symbols 257-285
 ; c = inline bit reader state
-; hl = literal/length alphabet root
-; de = distance alphabet root
 ; ix = reader
 ; iy = writer
 Inflate_CopyLength.0:
@@ -226,8 +219,6 @@ Inflate_CopyLength.28:
 
 ; a = length
 ; c' = inline bit reader state
-; hl' = literal/length alphabet root
-; de' = distance alphabet root
 ; ix = reader
 ; iy = writer
 Inflate_DecodeDistance_SetLength:
@@ -238,20 +229,15 @@ Inflate_DecodeDistance_SetLength:
 
 ; bc = length
 ; c' = inline bit reader state
-; hl' = literal/length alphabet root
-; de' = distance alphabet root
 ; ix = reader
 ; iy = writer
 Inflate_DecodeDistance:
 	exx
-	ex de,hl
-	jp hl
+	jp DistanceTree
 
 ; Distance alphabet symbols 0-29
 ; c = inline bit reader state
 ; bc = length
-; de = literal/length alphabet root
-; hl = distance alphabet root
 ; ix = reader
 ; iy = writer
 Inflate_CopyDistance.0:
@@ -407,8 +393,6 @@ Inflate_CopyDistance.29:
 ; a = distance - 1
 ; bc = length
 ; c' = inline bit reader state
-; de' = literal/length alphabet root
-; hl' = distance alphabet root
 ; ix = reader
 ; iy = writer
 Inflate_CopyAndNext_SetSmallDistance:
@@ -421,8 +405,6 @@ Inflate_CopyAndNext_SetSmallDistance:
 ; a' = distance - 1 LSB
 ; bc = length
 ; c' = inline bit reader state
-; de' = literal/length alphabet root
-; hl' = distance alphabet root
 ; ix = reader
 ; iy = writer
 Inflate_CopyAndNext_SetBigDistance:

@@ -66,12 +66,10 @@ Continue:
 ; bc = byte count (range 3-258)
 ; de = distance - 1
 ; c' = inline bit reader state
-; de' = literal/length alphabet root
-; hl' = distance alphabet root
 ; ix = reader
 ; iy = writer
 ; Modifies: af, bc, de, hl
-; Remark: does not return, instead does 'exx ; ex de,hl ; jp LiteralTree'
+; Remark: does not return, instead does 'exx ; jp LiteralTree'
 Writer_Copy_AndNext: PROC
 	ld hl,(Writer_bufPos)
 	scf
@@ -94,7 +92,6 @@ WrapContinue:
 
 	; and next
 	exx
-	ex de,hl
 	jp LiteralTree
 
 Wrap:	add a,OBUFFER_SIZE >> 8
@@ -135,7 +132,6 @@ Split:
 	jp nz,Writer_Copy_Slow_AndNext
 	; and next
 	exx
-	ex de,hl
 	jp LiteralTree
 	ENDP
 
@@ -144,7 +140,6 @@ Writer_WriteBlock_AndNext:
 	call Writer_WriteBlock
 	; and next
 	exx
-	ex de,hl
 	jp LiteralTree
 
 ; bc = byte count
