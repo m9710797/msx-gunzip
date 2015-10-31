@@ -72,7 +72,9 @@ Inflate_DoInflate:
 	ld ix,ReaderObject
 	ld iy,WriterObject
 	call Reader_PrepareReadBitInline
+	ld hl,(Writer_bufPos)
 	call LiteralTree
+	ld (Writer_bufPos),hl
 	jp Reader_FinishReadBitInline
 
 ; Literal/length alphabet symbols 0-255
@@ -244,18 +246,22 @@ Inflate_DecodeDistance_SetLength_0:
 ; ix = reader
 ; iy = writer
 Inflate_CopyDistance.0:
+	push hl
 	exx
 	ld de,1 - 1
 	jp Writer_Copy_AndNext
 Inflate_CopyDistance.1:
+	push hl
 	exx
 	ld de,2 - 1
 	jp Writer_Copy_AndNext
 Inflate_CopyDistance.2:
+	push hl
 	exx
 	ld de,3 - 1
 	jp Writer_Copy_AndNext
 Inflate_CopyDistance.3:
+	push hl
 	exx
 	ld de,4 - 1
 	jp Writer_Copy_AndNext
@@ -309,12 +315,14 @@ Inflate_CopyDistance.15:
 	jp Inflate_CopyAndNext_SetSmallDistance
 Inflate_CopyDistance.16:
 	call Reader_ReadBitsInline_7_IX
+	push hl
 	exx
 	ld e,a
 	ld d,257 - 1 >> 8
 	jp Writer_Copy_AndNext
 Inflate_CopyDistance.17:
 	call Reader_ReadBitsInline_7_IX
+	push hl
 	exx
 	add a,385 - 1 & 0FFH
 	ld e,a
@@ -322,12 +330,14 @@ Inflate_CopyDistance.17:
 	jp Writer_Copy_AndNext
 Inflate_CopyDistance.18:
 	call Reader_ReadBitsInline_8_IX
+	push hl
 	exx
 	ld e,a
 	ld d,513 - 1 >> 8
 	jp Writer_Copy_AndNext
 Inflate_CopyDistance.19:
 	call Reader_ReadBitsInline_8_IX
+	push hl
 	exx
 	ld e,a
 	ld d,769 - 1 >> 8
@@ -399,6 +409,7 @@ Inflate_CopyDistance.29:
 ; ix = reader
 ; iy = writer
 Inflate_CopyAndNext_SetSmallDistance:
+	push hl
 	exx
 	ld e,a
 	ld d,0
@@ -411,6 +422,7 @@ Inflate_CopyAndNext_SetSmallDistance:
 ; ix = reader
 ; iy = writer
 Inflate_CopyAndNext_SetBigDistance:
+	push hl
 	exx
 	ld d,a
 	ex af,af'

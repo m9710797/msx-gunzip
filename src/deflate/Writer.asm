@@ -7,13 +7,12 @@ Writer_crc32:
 	dd 0FFFFFFFFH
 Writer_fileHandle:
 	db 0FFH		; start with invalid file handle
+Writer_bufPos:
+	dw OBUFFER
 
 
 ; de = file path
 Writer_Construct:
-	ld hl,OBUFFER
-	ld (Writer_bufPos),hl
-
 	ld a,d
 	or e
 	ret z
@@ -37,43 +36,32 @@ Writer_Destruct:
 
 WriterObject:
 ; a = value
-; iy = this
-	ld (OBUFFER),a
-Writer_bufPos: equ $ - 2
-	inc (iy + Writer_bufPosOfst)
+; hl = Writer_bufPos
+	ld (hl),a
+	inc l
 	jp nz,LiteralTree
-	;jr Writer_Write_IY_AndNext.Continue
 
-Writer_bufPosOfst: equ Writer_bufPos - WriterObject
-
-
-; a = value
-; iy = this
-; Modifies: none
-Writer_Write_IY_AndNext: PROC
-Continue:
-	ld a,(Writer_bufPos + 1)
-	inc a
-	ld (Writer_bufPos + 1),a
+	inc h
+	ld a,h
 	cp OBUFFER_END >> 8
 	jp nz,LiteralTree
-	push hl ;;;
+	ld (Writer_bufPos),hl	; OBUFFER_END
 	call Writer_FinishBlock
-	pop hl  ;;;
+	; hl = Writer_bufPos
 	jp LiteralTree
 	ENDP
 
 ; bc = byte count (range 3-258)
 ; de = distance - 1
 ; c' = inline bit reader state
-; ix = reader
-; iy = writer
 ; Modifies: af, bc, de, hl
 ; Remark: does not return, instead does 'exx ; jp LiteralTree'
 Writer_Copy_AndNext: PROC
-	ld hl,(Writer_bufPos)
+	pop hl   ; hl = Writer_bufPos
+	push hl
 	scf
 	sbc hl,de
+	pop de
 	ld a,h
 	jr c,Wrap
 	cp OBUFFER >> 8
@@ -81,37 +69,34 @@ Writer_Copy_AndNext: PROC
 WrapContinue:
 	ld a,OBUFFER_END_HIGH - 3
 	cp h  ; does the source have a 512 byte margin without wrapping?
-	jr c,Writer_Copy_Slow_AndNext
-	ld de,(Writer_bufPos) ; reload, faster than push/pop
+	jr c,Slow
 	cp d  ; does the destination a 512 byte margin without wrapping?
-	jr c,Writer_Copy_Slow_AndNext
+	jr c,Slow
 	ldi
 	ldi
 	ldir
-	ld (Writer_bufPos),de
-
+	push de
 	; and next
 	exx
+	pop hl	; updated Writer_bufPos
 	jp LiteralTree
 
 Wrap:	add a,OBUFFER_SIZE >> 8
 	ld h,a
 	jp WrapContinue
-	ENDP
 
 ; bc = byte count
 ; hl = buffer source
 ; de = buffer destination
-; iy = this
 ; Modifies: af, bc, de, hl
-Writer_Copy_Slow_AndNext: PROC
+Slow:	ld (Writer_bufPos),de
 	ld e,l
 	ld d,h
 	add hl,bc
 	jr c,Split
 	ld a,h
 	cp OBUFFER_END >> 8
-	jp c,Writer_WriteBlock_AndNext
+	jp c,WriteBlock_AndNext
 ; hl = end address
 Split:
 	push bc
@@ -124,35 +109,34 @@ Split:
 	sbc hl,bc  ; hl = bytes until end
 	ld c,l
 	ld b,h
-	call Writer_WriteBlock
+	call WriteBlock
 	pop bc
 	ld hl,OBUFFER
 	ld a,b
 	or c
-	jp nz,Writer_Copy_Slow_AndNext
+	jp nz,Slow
 	; and next
 	exx
+	ld hl,(Writer_bufPos)
 	jp LiteralTree
-	ENDP
 
-
-Writer_WriteBlock_AndNext:
-	call Writer_WriteBlock
+WriteBlock_AndNext:
+	call WriteBlock
 	; and next
 	exx
+	ld hl,(Writer_bufPos)
 	jp LiteralTree
 
 ; bc = byte count
 ; de = source
-; iy = this
 ; Modifies: af, bc, de, hl
-Writer_WriteBlock: PROC
+WriteBlock:
 	ld hl,(Writer_bufPos)
 	add hl,bc
-	jr c,Split
+	jr c,Split2
 	ld a,h
 	cp OBUFFER_END >> 8
-	jr nc,Split
+	jr nc,Split2
 	and a
 	sbc hl,bc
 	ex de,hl
@@ -160,7 +144,7 @@ Writer_WriteBlock: PROC
 	ld (Writer_bufPos),de
 	ret
 ; hl = end address
-Split:
+Split2:
 	push bc
 	ld bc,OBUFFER_END
 	and a
@@ -181,7 +165,7 @@ Split:
 	pop bc
 	ld a,b
 	or c
-	jp nz,Writer_WriteBlock
+	jp nz,WriteBlock
 	ret
 	ENDP
 
