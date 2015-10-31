@@ -20,7 +20,8 @@ headerCodeLengths:
 literalLengthDistanceCodeLengths:
 	ds DynamicAlphabets_MAX_LITERALLENGTHCODELENGTHS + DynamicAlphabets_MAX_DISTANCECODELENGTHS
 HeaderCodeTree:
-	ds 11 * (DynamicAlphabets_MAX_HEADERCODELENGTHS - 1)
+	ds (8+5) * (DynamicAlphabets_MAX_HEADERCODELENGTHS - 1)
+HeaderCodeTreeEnd: equ $
 
 
 ConstructDynamicAlphabets: PROC
@@ -75,6 +76,11 @@ Store:	ld (iy + 0),a  ; offset is dynamically changed!
 	push hl
 	ld iy,DynamicAlphabets_headerCodeSymbols
 	call generate_huffman
+	ld hl,HeaderCodeTreeEnd
+	ld de,(out_ptr)
+	or a
+	sbc hl,de
+	call c,System_ThrowException
 
 	; Read literal length distance code lengths
 	ld bc,(hdist)
@@ -94,6 +100,11 @@ Store:	ld (iy + 0),a  ; offset is dynamically changed!
 	ld hl,LiteralTree
 	ld iy,Inflate_literalLengthSymbols	; iy = literal/length symbol handlers table
 	call generate_huffman
+	ld hl,LiteralTreeEnd
+	ld de,(out_ptr)
+	or a
+	sbc hl,de
+	call c,System_ThrowException
 
 	; Construct distance alphabet
 	ld bc,(hdist) ; bc = number of symbols
@@ -103,7 +114,13 @@ Store:	ld (iy + 0),a  ; offset is dynamically changed!
 	ex de,hl	; de = length of symbols
 	ld hl,DistanceTree
 	ld iy,Inflate_distanceSymbols	; iy = distance symbol handlers table
-	jp generate_huffman
+	call generate_huffman
+	ld hl,DistanceTreeEnd
+	ld de,(out_ptr)
+	or a
+	sbc hl,de
+	call c,System_ThrowException
+	ret
 
 	ENDP
 
@@ -205,8 +222,47 @@ DynamicAlphabets_headerCodeOrder:
 	db 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
 
 DynamicAlphabets_headerCodeSymbols:
-	dw DynamicAlphabets_WriteLength.0, DynamicAlphabets_WriteLength.1, DynamicAlphabets_WriteLength.2, DynamicAlphabets_WriteLength.3
-	dw DynamicAlphabets_WriteLength.4, DynamicAlphabets_WriteLength.5, DynamicAlphabets_WriteLength.6, DynamicAlphabets_WriteLength.7
-	dw DynamicAlphabets_WriteLength.8, DynamicAlphabets_WriteLength.9, DynamicAlphabets_WriteLength.10, DynamicAlphabets_WriteLength.11
-	dw DynamicAlphabets_WriteLength.12, DynamicAlphabets_WriteLength.13, DynamicAlphabets_WriteLength.14, DynamicAlphabets_WriteLength.15
-	dw DynamicAlphabets_Copy, DynamicAlphabets_FillZero_3, DynamicAlphabets_FillZero_11, System_ThrowException
+	db 5
+	dw DynamicAlphabets_WriteLength.0
+	db 5
+	dw DynamicAlphabets_WriteLength.1
+	db 5
+	dw DynamicAlphabets_WriteLength.2
+	db 5
+	dw DynamicAlphabets_WriteLength.3
+	db 5
+	dw DynamicAlphabets_WriteLength.4
+	db 5
+	dw DynamicAlphabets_WriteLength.5
+	db 5
+	dw DynamicAlphabets_WriteLength.6
+	db 5
+	dw DynamicAlphabets_WriteLength.7
+	db 5
+	dw DynamicAlphabets_WriteLength.8
+	db 5
+	dw DynamicAlphabets_WriteLength.9
+	db 5
+	dw DynamicAlphabets_WriteLength.10
+	db 5
+	dw DynamicAlphabets_WriteLength.11
+	db 5
+	dw DynamicAlphabets_WriteLength.12
+	db 5
+	dw DynamicAlphabets_WriteLength.13
+	db 5
+	dw DynamicAlphabets_WriteLength.14
+	db 5
+	dw DynamicAlphabets_WriteLength.15
+
+	db 12
+	dw DynamicAlphabets_Copy
+
+	db 10
+	dw DynamicAlphabets_FillZero_3
+
+	db 10
+	dw DynamicAlphabets_FillZero_11
+
+	db 3
+	dw System_ThrowException_

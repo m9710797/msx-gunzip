@@ -66,12 +66,22 @@ Inflate_InflateFixedCompressed:
 	ld hl,LiteralTree
 	ld iy,Inflate_literalLengthSymbols
 	call generate_huffman
+	ld hl,LiteralTreeEnd
+	ld de,(out_ptr)
+	or a
+	sbc hl,de
+	call c,System_ThrowException
 
 	ld bc,FixedAlphabets_distanceCodeLengthsCount
 	ld de,FixedAlphabets_distanceCodeLengths
 	ld hl,DistanceTree
 	ld iy,Inflate_distanceSymbols
 	call generate_huffman
+	ld hl,DistanceTreeEnd
+	ld de,(out_ptr)
+	or a
+	sbc hl,de
+	call c,System_ThrowException
 	jr Inflate_DoInflate
 
 Inflate_InflateDynamicCompressed:
@@ -438,88 +448,650 @@ Inflate_CopyAndNext_SetBigDistance:
 
 ;
 Inflate_literalLengthSymbols:
-	dw Inflate_WriteLiteral.0, Inflate_WriteLiteral.1, Inflate_WriteLiteral.2, Inflate_WriteLiteral.3
-	dw Inflate_WriteLiteral.4, Inflate_WriteLiteral.5, Inflate_WriteLiteral.6, Inflate_WriteLiteral.7
-	dw Inflate_WriteLiteral.8, Inflate_WriteLiteral.9, Inflate_WriteLiteral.10, Inflate_WriteLiteral.11
-	dw Inflate_WriteLiteral.12, Inflate_WriteLiteral.13, Inflate_WriteLiteral.14, Inflate_WriteLiteral.15
-	dw Inflate_WriteLiteral.16, Inflate_WriteLiteral.17, Inflate_WriteLiteral.18, Inflate_WriteLiteral.19
-	dw Inflate_WriteLiteral.20, Inflate_WriteLiteral.21, Inflate_WriteLiteral.22, Inflate_WriteLiteral.23
-	dw Inflate_WriteLiteral.24, Inflate_WriteLiteral.25, Inflate_WriteLiteral.26, Inflate_WriteLiteral.27
-	dw Inflate_WriteLiteral.28, Inflate_WriteLiteral.29, Inflate_WriteLiteral.30, Inflate_WriteLiteral.31
-	dw Inflate_WriteLiteral.32, Inflate_WriteLiteral.33, Inflate_WriteLiteral.34, Inflate_WriteLiteral.35
-	dw Inflate_WriteLiteral.36, Inflate_WriteLiteral.37, Inflate_WriteLiteral.38, Inflate_WriteLiteral.39
-	dw Inflate_WriteLiteral.40, Inflate_WriteLiteral.41, Inflate_WriteLiteral.42, Inflate_WriteLiteral.43
-	dw Inflate_WriteLiteral.44, Inflate_WriteLiteral.45, Inflate_WriteLiteral.46, Inflate_WriteLiteral.47
-	dw Inflate_WriteLiteral.48, Inflate_WriteLiteral.49, Inflate_WriteLiteral.50, Inflate_WriteLiteral.51
-	dw Inflate_WriteLiteral.52, Inflate_WriteLiteral.53, Inflate_WriteLiteral.54, Inflate_WriteLiteral.55
-	dw Inflate_WriteLiteral.56, Inflate_WriteLiteral.57, Inflate_WriteLiteral.58, Inflate_WriteLiteral.59
-	dw Inflate_WriteLiteral.60, Inflate_WriteLiteral.61, Inflate_WriteLiteral.62, Inflate_WriteLiteral.63
-	dw Inflate_WriteLiteral.64, Inflate_WriteLiteral.65, Inflate_WriteLiteral.66, Inflate_WriteLiteral.67
-	dw Inflate_WriteLiteral.68, Inflate_WriteLiteral.69, Inflate_WriteLiteral.70, Inflate_WriteLiteral.71
-	dw Inflate_WriteLiteral.72, Inflate_WriteLiteral.73, Inflate_WriteLiteral.74, Inflate_WriteLiteral.75
-	dw Inflate_WriteLiteral.76, Inflate_WriteLiteral.77, Inflate_WriteLiteral.78, Inflate_WriteLiteral.79
-	dw Inflate_WriteLiteral.80, Inflate_WriteLiteral.81, Inflate_WriteLiteral.82, Inflate_WriteLiteral.83
-	dw Inflate_WriteLiteral.84, Inflate_WriteLiteral.85, Inflate_WriteLiteral.86, Inflate_WriteLiteral.87
-	dw Inflate_WriteLiteral.88, Inflate_WriteLiteral.89, Inflate_WriteLiteral.90, Inflate_WriteLiteral.91
-	dw Inflate_WriteLiteral.92, Inflate_WriteLiteral.93, Inflate_WriteLiteral.94, Inflate_WriteLiteral.95
-	dw Inflate_WriteLiteral.96, Inflate_WriteLiteral.97, Inflate_WriteLiteral.98, Inflate_WriteLiteral.99
-	dw Inflate_WriteLiteral.100, Inflate_WriteLiteral.101, Inflate_WriteLiteral.102, Inflate_WriteLiteral.103
-	dw Inflate_WriteLiteral.104, Inflate_WriteLiteral.105, Inflate_WriteLiteral.106, Inflate_WriteLiteral.107
-	dw Inflate_WriteLiteral.108, Inflate_WriteLiteral.109, Inflate_WriteLiteral.110, Inflate_WriteLiteral.111
-	dw Inflate_WriteLiteral.112, Inflate_WriteLiteral.113, Inflate_WriteLiteral.114, Inflate_WriteLiteral.115
-	dw Inflate_WriteLiteral.116, Inflate_WriteLiteral.117, Inflate_WriteLiteral.118, Inflate_WriteLiteral.119
-	dw Inflate_WriteLiteral.120, Inflate_WriteLiteral.121, Inflate_WriteLiteral.122, Inflate_WriteLiteral.123
-	dw Inflate_WriteLiteral.124, Inflate_WriteLiteral.125, Inflate_WriteLiteral.126, Inflate_WriteLiteral.127
-	dw Inflate_WriteLiteral.128, Inflate_WriteLiteral.129, Inflate_WriteLiteral.130, Inflate_WriteLiteral.131
-	dw Inflate_WriteLiteral.132, Inflate_WriteLiteral.133, Inflate_WriteLiteral.134, Inflate_WriteLiteral.135
-	dw Inflate_WriteLiteral.136, Inflate_WriteLiteral.137, Inflate_WriteLiteral.138, Inflate_WriteLiteral.139
-	dw Inflate_WriteLiteral.140, Inflate_WriteLiteral.141, Inflate_WriteLiteral.142, Inflate_WriteLiteral.143
-	dw Inflate_WriteLiteral.144, Inflate_WriteLiteral.145, Inflate_WriteLiteral.146, Inflate_WriteLiteral.147
-	dw Inflate_WriteLiteral.148, Inflate_WriteLiteral.149, Inflate_WriteLiteral.150, Inflate_WriteLiteral.151
-	dw Inflate_WriteLiteral.152, Inflate_WriteLiteral.153, Inflate_WriteLiteral.154, Inflate_WriteLiteral.155
-	dw Inflate_WriteLiteral.156, Inflate_WriteLiteral.157, Inflate_WriteLiteral.158, Inflate_WriteLiteral.159
-	dw Inflate_WriteLiteral.160, Inflate_WriteLiteral.161, Inflate_WriteLiteral.162, Inflate_WriteLiteral.163
-	dw Inflate_WriteLiteral.164, Inflate_WriteLiteral.165, Inflate_WriteLiteral.166, Inflate_WriteLiteral.167
-	dw Inflate_WriteLiteral.168, Inflate_WriteLiteral.169, Inflate_WriteLiteral.170, Inflate_WriteLiteral.171
-	dw Inflate_WriteLiteral.172, Inflate_WriteLiteral.173, Inflate_WriteLiteral.174, Inflate_WriteLiteral.175
-	dw Inflate_WriteLiteral.176, Inflate_WriteLiteral.177, Inflate_WriteLiteral.178, Inflate_WriteLiteral.179
-	dw Inflate_WriteLiteral.180, Inflate_WriteLiteral.181, Inflate_WriteLiteral.182, Inflate_WriteLiteral.183
-	dw Inflate_WriteLiteral.184, Inflate_WriteLiteral.185, Inflate_WriteLiteral.186, Inflate_WriteLiteral.187
-	dw Inflate_WriteLiteral.188, Inflate_WriteLiteral.189, Inflate_WriteLiteral.190, Inflate_WriteLiteral.191
-	dw Inflate_WriteLiteral.192, Inflate_WriteLiteral.193, Inflate_WriteLiteral.194, Inflate_WriteLiteral.195
-	dw Inflate_WriteLiteral.196, Inflate_WriteLiteral.197, Inflate_WriteLiteral.198, Inflate_WriteLiteral.199
-	dw Inflate_WriteLiteral.200, Inflate_WriteLiteral.201, Inflate_WriteLiteral.202, Inflate_WriteLiteral.203
-	dw Inflate_WriteLiteral.204, Inflate_WriteLiteral.205, Inflate_WriteLiteral.206, Inflate_WriteLiteral.207
-	dw Inflate_WriteLiteral.208, Inflate_WriteLiteral.209, Inflate_WriteLiteral.210, Inflate_WriteLiteral.211
-	dw Inflate_WriteLiteral.212, Inflate_WriteLiteral.213, Inflate_WriteLiteral.214, Inflate_WriteLiteral.215
-	dw Inflate_WriteLiteral.216, Inflate_WriteLiteral.217, Inflate_WriteLiteral.218, Inflate_WriteLiteral.219
-	dw Inflate_WriteLiteral.220, Inflate_WriteLiteral.221, Inflate_WriteLiteral.222, Inflate_WriteLiteral.223
-	dw Inflate_WriteLiteral.224, Inflate_WriteLiteral.225, Inflate_WriteLiteral.226, Inflate_WriteLiteral.227
-	dw Inflate_WriteLiteral.228, Inflate_WriteLiteral.229, Inflate_WriteLiteral.230, Inflate_WriteLiteral.231
-	dw Inflate_WriteLiteral.232, Inflate_WriteLiteral.233, Inflate_WriteLiteral.234, Inflate_WriteLiteral.235
-	dw Inflate_WriteLiteral.236, Inflate_WriteLiteral.237, Inflate_WriteLiteral.238, Inflate_WriteLiteral.239
-	dw Inflate_WriteLiteral.240, Inflate_WriteLiteral.241, Inflate_WriteLiteral.242, Inflate_WriteLiteral.243
-	dw Inflate_WriteLiteral.244, Inflate_WriteLiteral.245, Inflate_WriteLiteral.246, Inflate_WriteLiteral.247
-	dw Inflate_WriteLiteral.248, Inflate_WriteLiteral.249, Inflate_WriteLiteral.250, Inflate_WriteLiteral.251
-	dw Inflate_WriteLiteral.252, Inflate_WriteLiteral.253, Inflate_WriteLiteral.254, Inflate_WriteLiteral.255
-	dw Inflate_EndBlock, Inflate_CopyLength.0, Inflate_CopyLength.1, Inflate_CopyLength.2
-	dw Inflate_CopyLength.3, Inflate_CopyLength.4, Inflate_CopyLength.5, Inflate_CopyLength.6
-	dw Inflate_CopyLength.7, Inflate_CopyLength.8, Inflate_CopyLength.9, Inflate_CopyLength.10
-	dw Inflate_CopyLength.11, Inflate_CopyLength.12, Inflate_CopyLength.13, Inflate_CopyLength.14
-	dw Inflate_CopyLength.15, Inflate_CopyLength.16, Inflate_CopyLength.17, Inflate_CopyLength.18
-	dw Inflate_CopyLength.19, Inflate_CopyLength.20, Inflate_CopyLength.21, Inflate_CopyLength.22
-	dw Inflate_CopyLength.23, Inflate_CopyLength.24, Inflate_CopyLength.25, Inflate_CopyLength.26
-	dw Inflate_CopyLength.27, Inflate_CopyLength.28, System_ThrowException, System_ThrowException
+	db 4
+	dw Inflate_WriteLiteral.0
+	db 4
+	dw Inflate_WriteLiteral.1
+	db 4
+	dw Inflate_WriteLiteral.2
+	db 4
+	dw Inflate_WriteLiteral.3
+	db 4
+	dw Inflate_WriteLiteral.4
+	db 4
+	dw Inflate_WriteLiteral.5
+	db 4
+	dw Inflate_WriteLiteral.6
+	db 4
+	dw Inflate_WriteLiteral.7
+	db 4
+	dw Inflate_WriteLiteral.8
+	db 4
+	dw Inflate_WriteLiteral.9
+	db 4
+	dw Inflate_WriteLiteral.10
+	db 4
+	dw Inflate_WriteLiteral.11
+	db 4
+	dw Inflate_WriteLiteral.12
+	db 4
+	dw Inflate_WriteLiteral.13
+	db 4
+	dw Inflate_WriteLiteral.14
+	db 4
+	dw Inflate_WriteLiteral.15
+	db 4
+	dw Inflate_WriteLiteral.16
+	db 4
+	dw Inflate_WriteLiteral.17
+	db 4
+	dw Inflate_WriteLiteral.18
+	db 4
+	dw Inflate_WriteLiteral.19
+	db 4
+	dw Inflate_WriteLiteral.20
+	db 4
+	dw Inflate_WriteLiteral.21
+	db 4
+	dw Inflate_WriteLiteral.22
+	db 4
+	dw Inflate_WriteLiteral.23
+	db 4
+	dw Inflate_WriteLiteral.24
+	db 4
+	dw Inflate_WriteLiteral.25
+	db 4
+	dw Inflate_WriteLiteral.26
+	db 4
+	dw Inflate_WriteLiteral.27
+	db 4
+	dw Inflate_WriteLiteral.28
+	db 4
+	dw Inflate_WriteLiteral.29
+	db 4
+	dw Inflate_WriteLiteral.30
+	db 4
+	dw Inflate_WriteLiteral.31
+	db 4
+	dw Inflate_WriteLiteral.32
+	db 4
+	dw Inflate_WriteLiteral.33
+	db 4
+	dw Inflate_WriteLiteral.34
+	db 4
+	dw Inflate_WriteLiteral.35
+	db 4
+	dw Inflate_WriteLiteral.36
+	db 4
+	dw Inflate_WriteLiteral.37
+	db 4
+	dw Inflate_WriteLiteral.38
+	db 4
+	dw Inflate_WriteLiteral.39
+	db 4
+	dw Inflate_WriteLiteral.40
+	db 4
+	dw Inflate_WriteLiteral.41
+	db 4
+	dw Inflate_WriteLiteral.42
+	db 4
+	dw Inflate_WriteLiteral.43
+	db 4
+	dw Inflate_WriteLiteral.44
+	db 4
+	dw Inflate_WriteLiteral.45
+	db 4
+	dw Inflate_WriteLiteral.46
+	db 4
+	dw Inflate_WriteLiteral.47
+	db 4
+	dw Inflate_WriteLiteral.48
+	db 4
+	dw Inflate_WriteLiteral.49
+	db 4
+	dw Inflate_WriteLiteral.50
+	db 4
+	dw Inflate_WriteLiteral.51
+	db 4
+	dw Inflate_WriteLiteral.52
+	db 4
+	dw Inflate_WriteLiteral.53
+	db 4
+	dw Inflate_WriteLiteral.54
+	db 4
+	dw Inflate_WriteLiteral.55
+	db 4
+	dw Inflate_WriteLiteral.56
+	db 4
+	dw Inflate_WriteLiteral.57
+	db 4
+	dw Inflate_WriteLiteral.58
+	db 4
+	dw Inflate_WriteLiteral.59
+	db 4
+	dw Inflate_WriteLiteral.60
+	db 4
+	dw Inflate_WriteLiteral.61
+	db 4
+	dw Inflate_WriteLiteral.62
+	db 4
+	dw Inflate_WriteLiteral.63
+	db 4
+	dw Inflate_WriteLiteral.64
+	db 4
+	dw Inflate_WriteLiteral.65
+	db 4
+	dw Inflate_WriteLiteral.66
+	db 4
+	dw Inflate_WriteLiteral.67
+	db 4
+	dw Inflate_WriteLiteral.68
+	db 4
+	dw Inflate_WriteLiteral.69
+	db 4
+	dw Inflate_WriteLiteral.70
+	db 4
+	dw Inflate_WriteLiteral.71
+	db 4
+	dw Inflate_WriteLiteral.72
+	db 4
+	dw Inflate_WriteLiteral.73
+	db 4
+	dw Inflate_WriteLiteral.74
+	db 4
+	dw Inflate_WriteLiteral.75
+	db 4
+	dw Inflate_WriteLiteral.76
+	db 4
+	dw Inflate_WriteLiteral.77
+	db 4
+	dw Inflate_WriteLiteral.78
+	db 4
+	dw Inflate_WriteLiteral.79
+	db 4
+	dw Inflate_WriteLiteral.80
+	db 4
+	dw Inflate_WriteLiteral.81
+	db 4
+	dw Inflate_WriteLiteral.82
+	db 4
+	dw Inflate_WriteLiteral.83
+	db 4
+	dw Inflate_WriteLiteral.84
+	db 4
+	dw Inflate_WriteLiteral.85
+	db 4
+	dw Inflate_WriteLiteral.86
+	db 4
+	dw Inflate_WriteLiteral.87
+	db 4
+	dw Inflate_WriteLiteral.88
+	db 4
+	dw Inflate_WriteLiteral.89
+	db 4
+	dw Inflate_WriteLiteral.90
+	db 4
+	dw Inflate_WriteLiteral.91
+	db 4
+	dw Inflate_WriteLiteral.92
+	db 4
+	dw Inflate_WriteLiteral.93
+	db 4
+	dw Inflate_WriteLiteral.94
+	db 4
+	dw Inflate_WriteLiteral.95
+	db 4
+	dw Inflate_WriteLiteral.96
+	db 4
+	dw Inflate_WriteLiteral.97
+	db 4
+	dw Inflate_WriteLiteral.98
+	db 4
+	dw Inflate_WriteLiteral.99
+	db 4
+	dw Inflate_WriteLiteral.100
+	db 4
+	dw Inflate_WriteLiteral.101
+	db 4
+	dw Inflate_WriteLiteral.102
+	db 4
+	dw Inflate_WriteLiteral.103
+	db 4
+	dw Inflate_WriteLiteral.104
+	db 4
+	dw Inflate_WriteLiteral.105
+	db 4
+	dw Inflate_WriteLiteral.106
+	db 4
+	dw Inflate_WriteLiteral.107
+	db 4
+	dw Inflate_WriteLiteral.108
+	db 4
+	dw Inflate_WriteLiteral.109
+	db 4
+	dw Inflate_WriteLiteral.110
+	db 4
+	dw Inflate_WriteLiteral.111
+	db 4
+	dw Inflate_WriteLiteral.112
+	db 4
+	dw Inflate_WriteLiteral.113
+	db 4
+	dw Inflate_WriteLiteral.114
+	db 4
+	dw Inflate_WriteLiteral.115
+	db 4
+	dw Inflate_WriteLiteral.116
+	db 4
+	dw Inflate_WriteLiteral.117
+	db 4
+	dw Inflate_WriteLiteral.118
+	db 4
+	dw Inflate_WriteLiteral.119
+	db 4
+	dw Inflate_WriteLiteral.120
+	db 4
+	dw Inflate_WriteLiteral.121
+	db 4
+	dw Inflate_WriteLiteral.122
+	db 4
+	dw Inflate_WriteLiteral.123
+	db 4
+	dw Inflate_WriteLiteral.124
+	db 4
+	dw Inflate_WriteLiteral.125
+	db 4
+	dw Inflate_WriteLiteral.126
+	db 4
+	dw Inflate_WriteLiteral.127
+	db 4
+	dw Inflate_WriteLiteral.128
+	db 4
+	dw Inflate_WriteLiteral.129
+	db 4
+	dw Inflate_WriteLiteral.130
+	db 4
+	dw Inflate_WriteLiteral.131
+	db 4
+	dw Inflate_WriteLiteral.132
+	db 4
+	dw Inflate_WriteLiteral.133
+	db 4
+	dw Inflate_WriteLiteral.134
+	db 4
+	dw Inflate_WriteLiteral.135
+	db 4
+	dw Inflate_WriteLiteral.136
+	db 4
+	dw Inflate_WriteLiteral.137
+	db 4
+	dw Inflate_WriteLiteral.138
+	db 4
+	dw Inflate_WriteLiteral.139
+	db 4
+	dw Inflate_WriteLiteral.140
+	db 4
+	dw Inflate_WriteLiteral.141
+	db 4
+	dw Inflate_WriteLiteral.142
+	db 4
+	dw Inflate_WriteLiteral.143
+	db 4
+	dw Inflate_WriteLiteral.144
+	db 4
+	dw Inflate_WriteLiteral.145
+	db 4
+	dw Inflate_WriteLiteral.146
+	db 4
+	dw Inflate_WriteLiteral.147
+	db 4
+	dw Inflate_WriteLiteral.148
+	db 4
+	dw Inflate_WriteLiteral.149
+	db 4
+	dw Inflate_WriteLiteral.150
+	db 4
+	dw Inflate_WriteLiteral.151
+	db 4
+	dw Inflate_WriteLiteral.152
+	db 4
+	dw Inflate_WriteLiteral.153
+	db 4
+	dw Inflate_WriteLiteral.154
+	db 4
+	dw Inflate_WriteLiteral.155
+	db 4
+	dw Inflate_WriteLiteral.156
+	db 4
+	dw Inflate_WriteLiteral.157
+	db 4
+	dw Inflate_WriteLiteral.158
+	db 4
+	dw Inflate_WriteLiteral.159
+	db 4
+	dw Inflate_WriteLiteral.160
+	db 4
+	dw Inflate_WriteLiteral.161
+	db 4
+	dw Inflate_WriteLiteral.162
+	db 4
+	dw Inflate_WriteLiteral.163
+	db 4
+	dw Inflate_WriteLiteral.164
+	db 4
+	dw Inflate_WriteLiteral.165
+	db 4
+	dw Inflate_WriteLiteral.166
+	db 4
+	dw Inflate_WriteLiteral.167
+	db 4
+	dw Inflate_WriteLiteral.168
+	db 4
+	dw Inflate_WriteLiteral.169
+	db 4
+	dw Inflate_WriteLiteral.170
+	db 4
+	dw Inflate_WriteLiteral.171
+	db 4
+	dw Inflate_WriteLiteral.172
+	db 4
+	dw Inflate_WriteLiteral.173
+	db 4
+	dw Inflate_WriteLiteral.174
+	db 4
+	dw Inflate_WriteLiteral.175
+	db 4
+	dw Inflate_WriteLiteral.176
+	db 4
+	dw Inflate_WriteLiteral.177
+	db 4
+	dw Inflate_WriteLiteral.178
+	db 4
+	dw Inflate_WriteLiteral.179
+	db 4
+	dw Inflate_WriteLiteral.180
+	db 4
+	dw Inflate_WriteLiteral.181
+	db 4
+	dw Inflate_WriteLiteral.182
+	db 4
+	dw Inflate_WriteLiteral.183
+	db 4
+	dw Inflate_WriteLiteral.184
+	db 4
+	dw Inflate_WriteLiteral.185
+	db 4
+	dw Inflate_WriteLiteral.186
+	db 4
+	dw Inflate_WriteLiteral.187
+	db 4
+	dw Inflate_WriteLiteral.188
+	db 4
+	dw Inflate_WriteLiteral.189
+	db 4
+	dw Inflate_WriteLiteral.190
+	db 4
+	dw Inflate_WriteLiteral.191
+	db 4
+	dw Inflate_WriteLiteral.192
+	db 4
+	dw Inflate_WriteLiteral.193
+	db 4
+	dw Inflate_WriteLiteral.194
+	db 4
+	dw Inflate_WriteLiteral.195
+	db 4
+	dw Inflate_WriteLiteral.196
+	db 4
+	dw Inflate_WriteLiteral.197
+	db 4
+	dw Inflate_WriteLiteral.198
+	db 4
+	dw Inflate_WriteLiteral.199
+	db 4
+	dw Inflate_WriteLiteral.200
+	db 4
+	dw Inflate_WriteLiteral.201
+	db 4
+	dw Inflate_WriteLiteral.202
+	db 4
+	dw Inflate_WriteLiteral.203
+	db 4
+	dw Inflate_WriteLiteral.204
+	db 4
+	dw Inflate_WriteLiteral.205
+	db 4
+	dw Inflate_WriteLiteral.206
+	db 4
+	dw Inflate_WriteLiteral.207
+	db 4
+	dw Inflate_WriteLiteral.208
+	db 4
+	dw Inflate_WriteLiteral.209
+	db 4
+	dw Inflate_WriteLiteral.210
+	db 4
+	dw Inflate_WriteLiteral.211
+	db 4
+	dw Inflate_WriteLiteral.212
+	db 4
+	dw Inflate_WriteLiteral.213
+	db 4
+	dw Inflate_WriteLiteral.214
+	db 4
+	dw Inflate_WriteLiteral.215
+	db 4
+	dw Inflate_WriteLiteral.216
+	db 4
+	dw Inflate_WriteLiteral.217
+	db 4
+	dw Inflate_WriteLiteral.218
+	db 4
+	dw Inflate_WriteLiteral.219
+	db 4
+	dw Inflate_WriteLiteral.220
+	db 4
+	dw Inflate_WriteLiteral.221
+	db 4
+	dw Inflate_WriteLiteral.222
+	db 4
+	dw Inflate_WriteLiteral.223
+	db 4
+	dw Inflate_WriteLiteral.224
+	db 4
+	dw Inflate_WriteLiteral.225
+	db 4
+	dw Inflate_WriteLiteral.226
+	db 4
+	dw Inflate_WriteLiteral.227
+	db 4
+	dw Inflate_WriteLiteral.228
+	db 4
+	dw Inflate_WriteLiteral.229
+	db 4
+	dw Inflate_WriteLiteral.230
+	db 4
+	dw Inflate_WriteLiteral.231
+	db 4
+	dw Inflate_WriteLiteral.232
+	db 4
+	dw Inflate_WriteLiteral.233
+	db 4
+	dw Inflate_WriteLiteral.234
+	db 4
+	dw Inflate_WriteLiteral.235
+	db 4
+	dw Inflate_WriteLiteral.236
+	db 4
+	dw Inflate_WriteLiteral.237
+	db 4
+	dw Inflate_WriteLiteral.238
+	db 4
+	dw Inflate_WriteLiteral.239
+	db 4
+	dw Inflate_WriteLiteral.240
+	db 4
+	dw Inflate_WriteLiteral.241
+	db 4
+	dw Inflate_WriteLiteral.242
+	db 4
+	dw Inflate_WriteLiteral.243
+	db 4
+	dw Inflate_WriteLiteral.244
+	db 4
+	dw Inflate_WriteLiteral.245
+	db 4
+	dw Inflate_WriteLiteral.246
+	db 4
+	dw Inflate_WriteLiteral.247
+	db 4
+	dw Inflate_WriteLiteral.248
+	db 4
+	dw Inflate_WriteLiteral.249
+	db 4
+	dw Inflate_WriteLiteral.250
+	db 4
+	dw Inflate_WriteLiteral.251
+	db 4
+	dw Inflate_WriteLiteral.252
+	db 4
+	dw Inflate_WriteLiteral.253
+	db 4
+	dw Inflate_WriteLiteral.254
+	db 4
+	dw Inflate_WriteLiteral.255
+
+	db 1
+	dw Inflate_EndBlock
+
+	db 8
+	dw Inflate_CopyLength.0
+	db 8
+	dw Inflate_CopyLength.1
+	db 8
+	dw Inflate_CopyLength.2
+	db 8
+	dw Inflate_CopyLength.3
+	db 8
+	dw Inflate_CopyLength.4
+	db 8
+	dw Inflate_CopyLength.5
+	db 8
+	dw Inflate_CopyLength.6
+	db 8
+	dw Inflate_CopyLength.7
+	db 8
+	dw Inflate_CopyLength.8
+	db 8
+	dw Inflate_CopyLength.9
+	db 8
+	dw Inflate_CopyLength.10
+	db 8
+	dw Inflate_CopyLength.11
+	db 8
+	dw Inflate_CopyLength.12
+	db 8
+	dw Inflate_CopyLength.13
+	db 8
+	dw Inflate_CopyLength.14
+	db 8
+	dw Inflate_CopyLength.15
+	db 8
+	dw Inflate_CopyLength.16
+	db 8
+	dw Inflate_CopyLength.17
+	db 8
+	dw Inflate_CopyLength.18
+	db 8
+	dw Inflate_CopyLength.19
+	db 8
+	dw Inflate_CopyLength.20
+	db 8
+	dw Inflate_CopyLength.21
+	db 8
+	dw Inflate_CopyLength.22
+	db 8
+	dw Inflate_CopyLength.23
+	db 8
+	dw Inflate_CopyLength.24
+	db 8
+	dw Inflate_CopyLength.25
+	db 8
+	dw Inflate_CopyLength.26
+	db 16
+	dw Inflate_CopyLength.27
+	db 8
+	dw Inflate_CopyLength.28
+	db 3
+	dw System_ThrowException_
+	db 3
+	dw System_ThrowException_
 
 Inflate_distanceSymbols:
-	dw Inflate_CopyDistance.0, Inflate_CopyDistance.1, Inflate_CopyDistance.2, Inflate_CopyDistance.3
-	dw Inflate_CopyDistance.4, Inflate_CopyDistance.5, Inflate_CopyDistance.6, Inflate_CopyDistance.7
-	dw Inflate_CopyDistance.8, Inflate_CopyDistance.9, Inflate_CopyDistance.10, Inflate_CopyDistance.11
-	dw Inflate_CopyDistance.12, Inflate_CopyDistance.13, Inflate_CopyDistance.14, Inflate_CopyDistance.15
-	dw Inflate_CopyDistance.16, Inflate_CopyDistance.17, Inflate_CopyDistance.18, Inflate_CopyDistance.19
-	dw Inflate_CopyDistance.20, Inflate_CopyDistance.21, Inflate_CopyDistance.22, Inflate_CopyDistance.23
-	dw Inflate_CopyDistance.24, Inflate_CopyDistance.25, Inflate_CopyDistance.26, Inflate_CopyDistance.27
-	dw Inflate_CopyDistance.28, Inflate_CopyDistance.29, System_ThrowException, System_ThrowException
+	db 8
+	dw Inflate_CopyDistance.0
+	db 8
+	dw Inflate_CopyDistance.1
+	db 8
+	dw Inflate_CopyDistance.2
+	db 8
+	dw Inflate_CopyDistance.3
+	db 8
+	dw Inflate_CopyDistance.4
+	db 8
+	dw Inflate_CopyDistance.5
+	db 8
+	dw Inflate_CopyDistance.6
+	db 8
+	dw Inflate_CopyDistance.7
+	db 8
+	dw Inflate_CopyDistance.8
+	db 8
+	dw Inflate_CopyDistance.9
+	db 8
+	dw Inflate_CopyDistance.10
+	db 8
+	dw Inflate_CopyDistance.11
+	db 8
+	dw Inflate_CopyDistance.12
+	db 8
+	dw Inflate_CopyDistance.13
+	db 8
+	dw Inflate_CopyDistance.14
+	db 8
+	dw Inflate_CopyDistance.15
+	db 11
+	dw Inflate_CopyDistance.16
+	db 13
+	dw Inflate_CopyDistance.17
+	db 11
+	dw Inflate_CopyDistance.18
+	db 11
+	dw Inflate_CopyDistance.19
+	db 12
+	dw Inflate_CopyDistance.20
+	db 12
+	dw Inflate_CopyDistance.21
+	db 12
+	dw Inflate_CopyDistance.22
+	db 12
+	dw Inflate_CopyDistance.23
+	db 12
+	dw Inflate_CopyDistance.24
+	db 12
+	dw Inflate_CopyDistance.25
+	db 12
+	dw Inflate_CopyDistance.26
+	db 12
+	dw Inflate_CopyDistance.27
+	db 12
+	dw Inflate_CopyDistance.28
+	db 12
+	dw Inflate_CopyDistance.29
+	db 3
+	dw System_ThrowException_
+	db 3
+	dw System_ThrowException_
 
 Inflate_invalidBlockTypeError:
 	db "Invalid block type.",13,10,0
@@ -553,7 +1125,7 @@ Inflate_invalidLengthError:
 ; Requires:
 ;  scratch_buf must be 256-byte aligned, must be at least 32 bytes in size
 
-generate_huffman:
+generate_huffman: PROC
 	ld (root),hl
 	ld (out_ptr),hl
 	ld (length_ptr),de
@@ -624,7 +1196,7 @@ symbol_loop:
 	ld (length_ptr),hl	; ++length_ptr
 	ld a,c
 	add a,a
-	jr z,next_symbol
+	jp z,next_symbol
 	ld l,a
 	ld h,scratch_buf >> 8	; hl = &nextCode[length]
 
@@ -687,15 +1259,14 @@ create_loop:
 
 	; Create leaf node. ATM this is a jump to the symbol routine.
 	; TODO in the future also inline this jump
-	ld (hl),0C3H	; JP
-	inc hl
-	ld a,(iy+0)
-	ld (hl),a
-	inc hl
-	ld a,(iy+1)
-	ld (hl),a
-	inc hl
-	ld (out_ptr),hl		; update new output position
+debug:
+	ld c,(iy+0)
+	ld b,0		; bc = length
+	ld e,(iy+1)
+	ld d,(iy+2)
+	ex de,hl	; hl = routine / de = leaf-node
+	ldir
+	ld (out_ptr),de		; update new output position
 	jr next_symbol
 
 follow_loop:
@@ -744,13 +1315,14 @@ follow:	; invariant: hl = current (existing) huffman node
 
 	; reached an existing leaf node, fill-in jump-address to symbol-routine
 	inc hl			; skip conditional jump opcode
-	ld a,(iy+0)
+	ld a,(iy+1)
 	ld (hl),a
 	inc hl
-	ld a,(iy+1)
+	ld a,(iy+2)
 	ld (hl),a
 
 next_symbol:
+	inc iy
 	inc iy
 	inc iy
 	pop bc			; bc = number of remaining symbols
@@ -759,6 +1331,7 @@ next_symbol:
 	or c
 	jp nz,symbol_loop
 	ret
+	ENDP
 
 root:		dw 0
 length_ptr:	dw 0

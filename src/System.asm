@@ -56,6 +56,8 @@ System_Print:
 	pop hl
 	jr System_Print
 
+System_ThrowException_:
+	jp System_ThrowException
 System_ThrowException:
 	IF DEBUG
 	in a,(02EH)

@@ -32,8 +32,10 @@ code_end:
 CRC32Table:
 	INCLUDE "crctable.asm"
 
-LiteralTree:		ds VIRTUAL 11 * (288 - 1)
-DistanceTree:		ds VIRTUAL 11 * (32 - 1)
+LiteralTree:		ds VIRTUAL (8 +  5) * (288 - 1)
+LiteralTreeEnd:		equ $
+DistanceTree:		ds VIRTUAL (8 + 12) * ( 32 - 1)
+DistanceTreeEnd:	equ $
 cli_buffer:		ds VIRTUAL 255	; TODO could be reused once files are opened
 
 	VIRTUAL_ALIGN 100H
