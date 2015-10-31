@@ -23,32 +23,37 @@ Inflate_InflateBlock:
 	jp Application_TerminateWithError
 
 Inflate_InflateUncompressed: PROC
-	ld ix,ReaderObject
+	ld de,(Reader_bufPos)
 	call Reader_Align
-	call Reader_Read_IX_slow
-	ld e,a
-	call Reader_Read_IX_slow
-	ld d,a
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
+	ld c,a
+	call Reader_Read_DE_fast
+	ld b,a
+	call Reader_Read_DE_fast
 	ld l,a
-	call Reader_Read_IX_slow
+	call Reader_Read_DE_fast
 	ld h,a
 	scf
-	adc hl,de
+	adc hl,bc
 	ld hl,Inflate_invalidLengthError
 	jp nz,Application_TerminateWithError
-	ld a,d
-	or e
-	ret z
-	ld b,e
-	dec de
-	inc d
-	ld c,d
-Loop:	call Reader_Read_IX_slow
+
+	ld a,b
+	or c
+	jr z,End
+	ld a,c
+	dec bc
+	inc b
+	ld c,b
+	ld b,a
+
+Loop:	call Reader_Read_DE_fast
 	call Writer_Write_slow
 	djnz Loop
 	dec c
 	jr nz,Loop
+
+End:	ld (Reader_bufPos),de
 	ret
 	ENDP
 
@@ -69,7 +74,6 @@ Inflate_InflateFixedCompressed:
 Inflate_InflateDynamicCompressed:
 	call ConstructDynamicAlphabets
 Inflate_DoInflate:
-	ld ix,ReaderObject
 	ld iy,WriterObject
 	call Reader_PrepareReadBitInline
 	ld hl,(Writer_bufPos)

@@ -170,6 +170,7 @@ Split2:
 	ENDP
 
 ; a = value
+; de,bc <- unchanged
 Writer_Write_slow:
 	ld hl,(Writer_bufPos)
 	ld (hl),a
