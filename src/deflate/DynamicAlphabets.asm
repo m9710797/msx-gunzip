@@ -90,6 +90,8 @@ Loop:	ld e,(hl)
 	inc d	; +1 for nested 8-bit loop
 	pop iy	; iy = HeaderCodeTree
 	pop ix	; ix = reader
+	ld ixh,d ;;;;
+	ld ixl,e ;;;;
 	call Reader_PrepareReadBitInline
 	call DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths
 	call Reader_FinishReadBitInline
@@ -129,9 +131,9 @@ DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths:
 ; iy = header code alphabet root
 DynamicAlphabets_WriteAndNext:
 	inc hl
-	dec e
+	dec ixl
 	jp nz,DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths
-	dec d
+	dec ixh
 	jr nz,DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths
 	ret
 
@@ -148,9 +150,9 @@ DynamicAlphabets_FillAndNext_Loop:
 DynamicAlphabets_FillAndNext:
 	ld (hl),a
 	inc hl
-	dec e
+	dec ixl
 	jp nz,DynamicAlphabets_FillAndNext_Loop
-	dec d
+	dec ixh
 	jr nz,DynamicAlphabets_FillAndNext_Loop
 	ret
 
@@ -172,7 +174,7 @@ DynamicAlphabets_WriteLength: REPT 16, ?value
 ; ix = reader
 ; iy = header code alphabet root
 DynamicAlphabets_Copy:
-	call Reader_ReadBitsInline_2_IX
+	call Reader_ReadBitsInline_2_DE
 	add a,3
 	ld b,a
 	dec hl
@@ -187,7 +189,7 @@ DynamicAlphabets_Copy:
 ; ix = reader
 ; iy = header code alphabet root
 DynamicAlphabets_FillZero_3:
-	call Reader_ReadBitsInline_3_IX
+	call Reader_ReadBitsInline_3_DE
 	add a,3
 	ld b,a
 	xor a
@@ -200,7 +202,7 @@ DynamicAlphabets_FillZero_3:
 ; ix = reader
 ; iy = header code alphabet root
 DynamicAlphabets_FillZero_11:
-	call Reader_ReadBitsInline_7_IX
+	call Reader_ReadBitsInline_7_DE
 	add a,11
 	ld b,a
 	xor a
