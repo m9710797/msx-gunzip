@@ -58,18 +58,15 @@ ConstructDynamicAlphabets: PROC
 	; Read header code lengths
 	ld b,a	; hclen
 	ld hl,DynamicAlphabets_headerCodeOrder
-Loop:	ld e,(hl)
-	ld d,0
+	ld iy,headerCodeLengths
+Loop:	ld a,(hl)
 	inc hl
-	push hl
-	ld hl,headerCodeLengths
-	add hl,de
+	ld (Store + 2),a ; self modifying code!
 	push bc
 	ld b,3
 	call Reader_ReadBits_IX
 	pop bc
-	ld (hl),a
-	pop hl
+Store:	ld (iy + 0),a  ; offset is dynamically changed!
 	djnz Loop
 
 	; Construct header code alphabet
