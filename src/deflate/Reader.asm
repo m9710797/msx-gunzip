@@ -6,11 +6,43 @@
 ReaderObject: equ $
 ; ix = this
 ; a <- value
+Reader_Read_IX:
 	ld a,(IBUFFER)
 Reader_bufPos: equ $ - 2
 	inc (ix + Reader_bufPosOfst)
 	ret nz
-	jp Reader_Read_IX.Continue
+
+	push af
+	ld a,(Reader_bufPos + 1)
+	inc a
+	cp IBUFFER_END >> 8
+	jr z,NextBlock
+End:	ld (Reader_bufPos + 1),a
+	pop af
+	ret
+NextBlock:
+	push bc
+	push de
+	push hl
+	ld a,(Reader_endOfData)
+	or a
+	jr nz,EofError
+	call Reader_FillBuffer
+	pop hl
+	pop de
+	pop bc
+	ld a,(Reader_endOfData)
+	or a
+	ld a,IBUFFER >> 8	; bufferStart
+	jr z,End
+	; trap next read
+	ld a,0FFH
+	ld (Reader_bufPos),a
+	ld a,IBUFFER_END_HIGH - 1
+	jr End
+EofError:
+	ld hl,Reader_endOfDataError
+	call System_ThrowExceptionWithMessage
 
 Reader_bits:
 	db 0
@@ -46,45 +78,6 @@ Reader_Destruct:
 	ld c,45H ; _CLOSE
 	call BDOS
 	jp Application_CheckDOSError
-
-; ix = this
-; a <- value
-; Modifies: none
-Reader_Read_IX: PROC
-	jp ix
-Continue:
-	push af
-	ld a,(Reader_bufPos + 1)
-	inc a
-	cp IBUFFER_END >> 8
-	jr z,NextBlock
-End:	ld (Reader_bufPos + 1),a
-	pop af
-	ret
-NextBlock:
-	push bc
-	push de
-	push hl
-	ld a,(Reader_endOfData)
-	or a
-	jr nz,EofError
-	call Reader_FillBuffer
-	pop hl
-	pop de
-	pop bc
-	ld a,(Reader_endOfData)
-	or a
-	ld a,IBUFFER >> 8	; bufferStart
-	jr z,End
-	; trap next read
-	ld a,0FFH
-	ld (Reader_bufPos),a
-	ld a,IBUFFER_END_HIGH - 1
-	jr End
-EofError:
-	ld hl,Reader_endOfDataError
-	call System_ThrowExceptionWithMessage
-	ENDP
 
 ; Modifies: af, bc, de, hl
 Reader_FillBuffer:
