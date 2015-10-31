@@ -71,8 +71,14 @@ NextBlock:
 
 ; bc = byte count (range 3-258)
 ; de = distance - 1
+; c' = inline bit reader state
+; de' = literal/length alphabet root
+; hl' = distance alphabet root
+; ix = reader
+; iy = writer
 ; Modifies: af, bc, de, hl
-Writer_Copy: PROC
+; Remark: does not return, instead does 'exx ; ex de,hl ; jp hl'
+Writer_Copy_AndNext: PROC
 	ld hl,(Writer_bufPos)
 	scf
 	sbc hl,de
@@ -83,17 +89,21 @@ Writer_Copy: PROC
 WrapContinue:
 	ld a,OBUFFER_END_HIGH - 3
 	cp h  ; does the source have a 512 byte margin without wrapping?
-	jr c,Writer_Copy_Slow
+	jr c,Writer_Copy_Slow_AndNext
 	ld de,(Writer_bufPos) ; reload, faster than push/pop
 	cp d  ; does the destination a 512 byte margin without wrapping?
-	jr c,Writer_Copy_Slow
+	jr c,Writer_Copy_Slow_AndNext
 	ldi
 	ldi
 	ldir
 	ld (Writer_bufPos),de
-	ret
-Wrap:
-	add a,OBUFFER_SIZE >> 8
+
+	; and next
+	exx
+	ex de,hl
+	jp hl  ; jp Inflate_DecodeLiteralLength
+
+Wrap:	add a,OBUFFER_SIZE >> 8
 	ld h,a
 	jp WrapContinue
 	ENDP
@@ -103,14 +113,14 @@ Wrap:
 ; de = buffer destination
 ; iy = this
 ; Modifies: af, bc, de, hl
-Writer_Copy_Slow: PROC
+Writer_Copy_Slow_AndNext: PROC
 	ld e,l
 	ld d,h
 	add hl,bc
 	jr c,Split
 	ld a,h
 	cp OBUFFER_END >> 8
-	jp c,Writer_WriteBlock
+	jp c,Writer_WriteBlock_AndNext
 ; hl = end address
 Split:
 	push bc
@@ -128,9 +138,20 @@ Split:
 	ld hl,OBUFFER
 	ld a,b
 	or c
-	jp nz,Writer_Copy_Slow
-	ret
+	jp nz,Writer_Copy_Slow_AndNext
+	; and next
+	exx
+	ex de,hl
+	jp hl  ; jp Inflate_DecodeLiteralLength
 	ENDP
+
+
+Writer_WriteBlock_AndNext:
+	call Writer_WriteBlock
+	; and next
+	exx
+	ex de,hl
+	jp hl  ; jp Inflate_DecodeLiteralLength
 
 ; bc = byte count
 ; de = source

@@ -277,19 +277,19 @@ Inflate_DecodeDistance:
 Inflate_CopyDistance.0:
 	exx
 	ld de,1 - 1
-	jp Inflate_CopyAndNext
+	jp Writer_Copy_AndNext
 Inflate_CopyDistance.1:
 	exx
 	ld de,2 - 1
-	jp Inflate_CopyAndNext
+	jp Writer_Copy_AndNext
 Inflate_CopyDistance.2:
 	exx
 	ld de,3 - 1
-	jp Inflate_CopyAndNext
+	jp Writer_Copy_AndNext
 Inflate_CopyDistance.3:
 	exx
 	ld de,4 - 1
-	jp Inflate_CopyAndNext
+	jp Writer_Copy_AndNext
 Inflate_CopyDistance.4:
 	call Reader_ReadBitsInline_1_IX
 	add a,5 - 1
@@ -343,26 +343,26 @@ Inflate_CopyDistance.16:
 	exx
 	ld e,a
 	ld d,257 - 1 >> 8
-	jp Inflate_CopyAndNext
+	jp Writer_Copy_AndNext
 Inflate_CopyDistance.17:
 	call Reader_ReadBitsInline_7_IX
 	exx
 	add a,385 - 1 & 0FFH
 	ld e,a
 	ld d,385 - 1 >> 8
-	jp Inflate_CopyAndNext
+	jp Writer_Copy_AndNext
 Inflate_CopyDistance.18:
 	call Reader_ReadBitsInline_8_IX
 	exx
 	ld e,a
 	ld d,513 - 1 >> 8
-	jp Inflate_CopyAndNext
+	jp Writer_Copy_AndNext
 Inflate_CopyDistance.19:
 	call Reader_ReadBitsInline_8_IX
 	exx
 	ld e,a
 	ld d,769 - 1 >> 8
-	jp Inflate_CopyAndNext
+	jp Writer_Copy_AndNext
 Inflate_CopyDistance.20:
 	call Reader_ReadBitsInline_8_IX
 	ex af,af'
@@ -435,7 +435,7 @@ Inflate_CopyAndNext_SetSmallDistance:
 	exx
 	ld e,a
 	ld d,0
-	jp Inflate_CopyAndNext
+	jp Writer_Copy_AndNext
 
 ; a = distance - 1 MSB
 ; a' = distance - 1 LSB
@@ -450,20 +450,7 @@ Inflate_CopyAndNext_SetBigDistance:
 	ld d,a
 	ex af,af'
 	ld e,a
-	jp Inflate_CopyAndNext
-
-; bc = length
-; de = distance - 1
-; c' = inline bit reader state
-; de' = literal/length alphabet root
-; hl' = distance alphabet root
-; ix = reader
-; iy = writer
-Inflate_CopyAndNext:
-	call Writer_Copy
-	exx
-	ex de,hl
-	jp hl  ; jp Inflate_DecodeLiteralLength
+	jp Writer_Copy_AndNext
 
 ;
 Inflate_literalLengthSymbols:
