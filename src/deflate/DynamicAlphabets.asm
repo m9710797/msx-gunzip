@@ -25,49 +25,48 @@ HeaderCodeTree:
 
 ConstructDynamicAlphabets: PROC
 	; Read hlit
-	ld ix,ReaderObject
-	ld b,5
-	call Reader_ReadBits_IX
+	call Reader_PrepareReadBitInline
+	call Reader_ReadBitsInline_5_DE
 	inc a
 	cp (DynamicAlphabets_MAX_LITERALLENGTHCODELENGTHS & 0FFH) + 1
 	call nc,System_ThrowException
 	ld (hlit),a
 
 	; Read hdist
-	ld b,5
-	call Reader_ReadBits_IX
+	call Reader_ReadBitsInline_5_DE
 	inc a
 	cp DynamicAlphabets_MAX_DISTANCECODELENGTHS + 1
 	call nc,System_ThrowException
 	ld (hdist),a
 
 	; Read hclen
-	ld b,4
-	call Reader_ReadBits_IX
+	call Reader_ReadBitsInline_4_DE
 	add a,4
 	cp DynamicAlphabets_MAX_HEADERCODELENGTHS + 1
 	call nc,System_ThrowException
 
 	; Clear header code lengths
+	exx
 	ld hl,headerCodeLengths
 	ld de,headerCodeLengths + 1
 	ld bc,DynamicAlphabets_MAX_HEADERCODELENGTHS - 1
 	ld (hl),b ; 0
 	ldir
+	exx
 
 	; Read header code lengths
-	ld b,a	; hclen
+	ld ixl,a	; hclen
 	ld hl,DynamicAlphabets_headerCodeOrder
 	ld iy,headerCodeLengths
 Loop:	ld a,(hl)
 	inc hl
 	ld (Store + 2),a ; self modifying code!
-	push bc
-	ld b,3
-	call Reader_ReadBits_IX
-	pop bc
+	call Reader_ReadBitsInline_3_DE ; changes B
 Store:	ld (iy + 0),a  ; offset is dynamically changed!
-	djnz Loop
+	dec ixl
+	jr nz,Loop
+	push bc
+	push de
 
 	; Construct header code alphabet
 	ld bc,DynamicAlphabets_MAX_HEADERCODELENGTHS
@@ -78,13 +77,14 @@ Store:	ld (iy + 0),a  ; offset is dynamically changed!
 	call generate_huffman
 
 	; Read literal length distance code lengths
-	ld hl,literalLengthDistanceCodeLengths
 	ld bc,(hdist)
 	ld ix,(hlit)
 	add ix,bc
 	inc ixh	; +1 for nested 8-bit loop
 	pop iy	; iy = HeaderCodeTree
-	call Reader_PrepareReadBitInline
+	ld hl,literalLengthDistanceCodeLengths
+	pop de
+	pop bc
 	call DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths
 	call Reader_FinishReadBitInline
 
