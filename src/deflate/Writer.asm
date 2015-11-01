@@ -11,28 +11,6 @@ Writer_bufPos:
 	dw OBUFFER
 
 
-; de = file path
-Writer_Construct:
-	ld a,d
-	or e
-	ret z
-	ld a,00000010B  ; write only
-	ld bc,0 * 256 + 44H ; _CREATE
-	call #0005	; BDOS
-	call CheckDOSError
-	ld a,b
-	ld (Writer_fileHandle),a
-	ret
-
-Writer_Destruct:
-	call Writer_FlushBuffer
-	ld a,(Writer_fileHandle)
-	ld b,a
-	inc a
-	ret z
-	ld c,45H ; _CLOSE
-	call #0005	; BDOS
-	jp CheckDOSError
 
 ; a = value
 ; hl = Writer_bufPos

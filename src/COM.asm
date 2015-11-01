@@ -6,21 +6,21 @@
 		ld c,a
 		ld d,a
 		ld e,a
-		ld c,6FH ; _DOSVER
+		ld c,6FH	; _DOSVER
 		call #0005	; BDOS
 		ld hl,TextNeedDos2
 		add a,-1
-		jr c,ExitWithError
+		jp c,ExitWithError
 		ld a,b
 		cp 2
-		jr c,ExitWithError
+		jp c,ExitWithError
 
 ; Check if there's enough TPA memory available
 STACK_SIZE:	equ #0100	; make sure there's room for this much stack
 		ld hl,-(MEMORY_END + STACK_SIZE)
 		add hl,sp
 		ld hl,TextNoMemory
-		jr nc,ExitWithError
+		jp nc,ExitWithError
 
 ; Parse CLI
 		call ParseCLI
@@ -28,7 +28,7 @@ STACK_SIZE:	equ #0100	; make sure there's room for this much stack
 		ld a,l
 		or h
 		ld hl,TextUsage
-		jr z,ExitWithError
+		jp z,ExitWithError
 
 ; Print Welcome
 		ld a,(cli_quiet)
@@ -39,32 +39,63 @@ STACK_SIZE:	equ #0100	; make sure there's room for this much stack
 ; Print inflating/testing
 		ld a,(cli_quiet)
 		or a
-		jr nz,skip_print
+		jr nz,SkipPrint
 		ld hl,(cli_outputPath)
 		ld a,l
 		or h
 		ld hl,TextTesting
-		jr z,do_print
+		jr z,DoPrint
 		ld hl,TextInflating
-do_print:	call System_Print
+DoPrint:	call System_Print
 		ld hl,(cli_archivePath)
 		call System_Print
 		ld hl,TextDotDotDot
 		call System_Print
-skip_print:
+SkipPrint:
 
-; Create FileReader
+; Open input file
 		ld de,(cli_archivePath)
-		call Reader_Construct
+		ld a,%00000001  ; read only
+		ld c,#43	; _OPEN
+		call #0005	; BDOS
+		call CheckDOSError
+		ld a,b
+		ld (Reader_fileHandle),a
+		call Reader_FillBuffer	; fill buffer with initial content
 
-; Create FileWriter
+; Open output file
 		ld de,(cli_outputPath)
-		call Writer_Construct
+		ld a,d
+		or e
+		jr z,NoOutputFile
+		ld a,%00000010  ; write only
+		ld bc,0 * 256 + #44 ; _CREATE
+		call #0005	; BDOS
+		call CheckDOSError
+		ld a,b
+		ld (Writer_fileHandle),a
+NoOutputFile:
 
 		call Archive_Extract
 
-		call Writer_Destruct
-		jp Reader_Destruct
+; Close output file
+		call Writer_FlushBuffer
+		ld a,(Writer_fileHandle)
+		ld b,a
+		inc a
+		jr z,SkipCloseOutput
+		ld c,#45	; _CLOSE
+		call #0005	; BDOS
+		call CheckDOSError
+SkipCloseOutput:
+
+; Close input file
+		ld a,(Reader_fileHandle)
+		ld b,a
+		ld c,#45	; _CLOSE
+		call #0005	; BDOS
+		;jp CheckDOSError
+		; -- done -- 
 
 
 ; a <- DOS error code

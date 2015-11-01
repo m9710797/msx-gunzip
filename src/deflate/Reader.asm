@@ -55,24 +55,6 @@ EofError:
 	ENDP
 
 
-; de = file path
-Reader_Construct:
-	ld a,00000001B  ; read only
-	ld c,43H; _OPEN
-	call #0005	; BDOS
-	call CheckDOSError
-	ld a,b
-	ld (Reader_fileHandle),a
-
-	jr Reader_FillBuffer
-
-
-Reader_Destruct:
-	ld a,(Reader_fileHandle)
-	ld b,a
-	ld c,45H ; _CLOSE
-	call #0005	; BDOS
-	jp CheckDOSError
 
 ; Modifies: af, bc, de, hl
 Reader_FillBuffer:
