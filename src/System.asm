@@ -56,8 +56,11 @@ System_Print:
 	pop hl
 	jr System_Print
 
+; inline-able version
 System_ThrowException_:
 	jp System_ThrowException
+System_ThrowException_len: equ $ - System_ThrowException_
+
 System_ThrowException:
 	pop de
 	call System_PrintExceptionMessage
