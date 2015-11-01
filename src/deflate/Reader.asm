@@ -59,7 +59,7 @@ EofError:
 Reader_Construct:
 	ld a,00000001B  ; read only
 	ld c,43H; _OPEN
-	call BDOS
+	call #0005	; BDOS
 	call Application_CheckDOSError
 	ld a,b
 	ld (Reader_fileHandle),a
@@ -71,7 +71,7 @@ Reader_Destruct:
 	ld a,(Reader_fileHandle)
 	ld b,a
 	ld c,45H ; _CLOSE
-	call BDOS
+	call #0005	; BDOS
 	jp Application_CheckDOSError
 
 ; Modifies: af, bc, de, hl
@@ -81,7 +81,7 @@ Reader_FillBuffer:
 	ld de,IBUFFER
 	ld hl,IBUFFER_SIZE
 	ld c,48H ; _READ
-	call BDOS
+	call #0005	; BDOS
 	cp 0C7H ; .EOF
 	jp nz,Application_CheckDOSError
 	ld (Reader_endOfData),a	; any non-zero value

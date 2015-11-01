@@ -33,9 +33,9 @@ System_PrintHex:
 
 ; a = character
 System_PrintChar:
-	ld iy,(EXPTBL-1)
-	ld ix,CHPUT
-	jp CALSLT
+	ld iy,(#FCC0)	; EXPTBL-1
+	ld ix,#00A2	; CHPUT
+	jp #001C	; CALSLT
 
 ; hl = string (0-terminated)
 System_PrintLn:

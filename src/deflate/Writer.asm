@@ -18,7 +18,7 @@ Writer_Construct:
 	ret z
 	ld a,00000010B  ; write only
 	ld bc,0 * 256 + 44H ; _CREATE
-	call BDOS
+	call #0005	; BDOS
 	call Application_CheckDOSError
 	ld a,b
 	ld (Writer_fileHandle),a
@@ -31,7 +31,7 @@ Writer_Destruct:
 	inc a
 	ret z
 	ld c,45H ; _CLOSE
-	call BDOS
+	call #0005	; BDOS
 	jp Application_CheckDOSError
 
 ; a = value
@@ -231,7 +231,7 @@ inc_16mb:
 ; Modifies: af, bc, de, hl
 Writer_FlushBuffer:
 	ld c,0BH ; _CONST
-	call BDOS
+	call #0005	; BDOS
 
 	ld a,(Writer_fileHandle)
 	ld b,a
@@ -242,7 +242,7 @@ Writer_FlushBuffer:
 	and a
 	sbc hl,de
 	ld c,49H ; _WRITE
-	call BDOS
+	call #0005	; BDOS
 	jp Application_CheckDOSError
 
 ; Modifies: hl, bc

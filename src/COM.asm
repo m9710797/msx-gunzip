@@ -1,8 +1,12 @@
-;
-; gzip file decompressor
-;
+; macros
+ALIGN: MACRO ?boundary
+	ds ?boundary - 1 - ($ + ?boundary - 1) % ?boundary
+	ENDM
 
-	INCLUDE "Macros.asm"
+VIRTUAL_ALIGN: MACRO ?boundary
+	ds VIRTUAL ?boundary - 1 - ($ + ?boundary - 1) % ?boundary
+	ENDM
+
 
 DEBUG: equ 1
 
@@ -17,7 +21,6 @@ STACK_SIZE: equ 100H
 ;
 COM_Main:
 	INCLUDE "Application.asm"
-	INCLUDE "BIOS.asm"
 	INCLUDE "System.asm"
 	INCLUDE "CLI.asm"
 	INCLUDE "Archive.asm"

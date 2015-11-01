@@ -10,7 +10,7 @@ Application_Main:
 	ld d,a
 	ld e,a
 	ld c,6FH ; _DOSVER
-	call BDOS
+	call #0005	; BDOS
 	ld hl,Application_dos2RequiredError
 	add a,-1
 	jr c,Application_TerminateWithError
@@ -77,7 +77,7 @@ Application_CheckDOSError:
 	ld b,a
 	ld de,scratch_buf
 	ld c,66H ; _EXPLAIN
-	call BDOS
+	call #0005	; BDOS
 	ld hl,scratch_buf
 	call System_PrintLn
 	jr DOS_Terminate
@@ -89,7 +89,7 @@ Application_TerminateWithError:
 
 DOS_Terminate:
 	ld bc,1 * 256 + 62H ; _TERM
-	jp BDOS
+	jp #0005	; BDOS
 
 ;
 Application_welcome:

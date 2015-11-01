@@ -14,7 +14,7 @@ ParseCLI: PROC
 	ld de,cli_buffer
 	ld hl,CLI_parametersEnvName
 	ld bc,255 * 256 + 6BH ; _GENV
-	call BDOS
+	call #0005	; BDOS
 
 Loop:	ld a,(de)
 	and a
@@ -54,7 +54,7 @@ Path:
 	ld (cli_archivePath),de
 ParsePath:
 	ld c,5BH ; _PARSE
-	call BDOS
+	call #0005	; BDOS
 	ld a,(de)
 	and a
 	ret z
