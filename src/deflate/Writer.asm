@@ -223,42 +223,6 @@ Writer_FlushBuffer:
 	call #0005	; BDOS
 	jp CheckDOSError
 
-; Modifies: hl, bc
-
-; dehl <- count bytes written
-Writer_GetCount:
-	ld hl,(Writer_bufPos)
-	ld bc,OBUFFER
-	and a
-	sbc hl,bc
-	ld bc,(Writer_count + 0)
-	ld de,(Writer_count + 2)
-	add hl,bc
-	ret nc
-	inc de
-	ret
-
-; bcde <- crc32
-; Modifies: af, bc, de, hl
-Writer_GetCRC32:
-	exx
-	push bc
-	push hl
-	ld hl,OBUFFER
-	ld bc,(Writer_bufPos)
-	ld a,b
-	sub h
-	ld b,a
-	exx
-	ld de,(Writer_crc32 + 0)
-	ld bc,(Writer_crc32 + 2)
-	call nz,Writer_CalculateCRC32
-	exx
-	pop hl
-	pop bc
-	exx
-	ret
-
 ; bc' = byte count
 ; hl' = read address
 ; bcde = current crc

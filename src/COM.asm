@@ -76,7 +76,7 @@ SkipPrint:
 		ld (Writer_fileHandle),a
 NoOutputFile:
 
-		call Archive_Extract
+		call GzipExtract
 
 ; Close output file
 		call Writer_FlushBuffer
@@ -94,9 +94,155 @@ SkipCloseOutput:
 		ld b,a
 		ld c,#45	; _CLOSE
 		call #0005	; BDOS
-		;jp CheckDOSError
+		jp CheckDOSError
 		; -- done -- 
 
+;
+; The actual gunzip code
+;
+
+GzipExtract:
+; Read header
+; Header constants
+FLAG_HCRC:	equ #02
+FLAG_EXTRA:	equ #04
+FLAG_NAME:	equ #08
+FLAG_COMMENT:	equ #10
+FLAG_RESERVED:	equ #20	 ; #E0
+
+		call Reader_PrepareReadBitInline
+; Check two signature bytes
+		call Reader_Read_DE_fast
+		cp 31  ; gzip signature (1)
+		ld hl,TextNotGzip
+		jp nz,ExitWithError
+		call Reader_Read_DE_fast
+		cp 139  ; gzip signature (1)
+		;ld hl,TextNotGzip  ; hl not changed
+		jp nz,ExitWithError
+
+; Check compression algorithm
+		call Reader_Read_DE_fast
+		cp 8  ; deflate compression ID (1)
+		ld hl,TextNotDeflate
+		jp nz,ExitWithError
+
+; Read flags
+		call Reader_Read_DE_fast
+		ld (HeaderFlags),a
+
+; Skip mtime[4], xfl, os
+		ld hl,6	
+		call Reader_Skip_DE
+
+; Check for unknown flags
+		ld a,(HeaderFlags)
+		and FLAG_RESERVED
+		ld hl,TextUnknownFlag
+		jp nz,ExitWithError
+
+; Check and skip extra section
+		ld a,(HeaderFlags)
+		and FLAG_EXTRA
+		jr z,NoSkipExtra
+		call Reader_Read_DE_fast
+		ld l,a
+		call Reader_Read_DE_fast
+		ld h,a
+		call Reader_Skip_DE
+NoSkipExtra:
+
+; Skip name
+		ld a,(HeaderFlags)
+		and FLAG_NAME
+		call nz,SkipZString
+
+; Skip comment
+		ld a,(HeaderFlags)
+		and FLAG_COMMENT
+		call nz,SkipZString
+
+; Skip header CRC
+		ld a,(HeaderFlags)
+		and FLAG_HCRC
+		ld hl,2
+		call nz,Reader_Skip_DE
+
+		call Reader_FinishReadBitInline
+	
+; Actually decompress
+		call Inflate_Inflate
+	
+; Verify the decompressed data
+; Read expected values from file
+		call Reader_PrepareReadBitInline
+		call Reader_Read_DE_fast
+		ld l,a	; bits 7-0
+		call Reader_Read_DE_fast
+		ld h,a	; bits 15-8
+		push hl	; expected crc bits 15-0
+		call Reader_Read_DE_fast
+		ld l,a	; bits 23-16
+		call Reader_Read_DE_fast
+		ld h,a	; bits 31-24
+		push hl; expected crc bits 31-16
+
+		call Reader_Read_DE_fast
+		ld l,a	; bits 7-0
+		call Reader_Read_DE_fast
+		ld h,a	; bits 15-8
+		push hl	; expected-size bits 15-0
+		call Reader_Read_DE_fast
+		ld l,a	; bits 23-16
+		call Reader_Read_DE_fast
+		ld h,a	; hl = expected-size bits 31-16
+		call Reader_FinishReadBitInline
+
+; Verify size
+; TODO flush file before verifying
+		ld de,(Writer_count + 2) ; de = actual size bits 31-16
+		or a
+		sbc hl,de
+		jr nz,SizeError
+		ld hl,(Writer_bufPos)
+		ld a,h
+		sub OBUFFER >> 8
+		ld h,a		; hl = #bytes still in buffer
+		ld bc,(Writer_count + 0) ; written size 15-0
+		add hl,bc	; hl = actual size  (add cannot overflow)
+		pop de		; expected, bits 15-0
+		sbc hl,de
+SizeError	ld hl,TextSizeError
+		jp nz,ExitWithError
+
+; Verify CRC
+		ld hl,OBUFFER
+		ld bc,(Writer_bufPos)
+		ld a,b
+		sub h
+		ld b,a
+		exx
+		ld de,(Writer_crc32 + 0)
+		ld bc,(Writer_crc32 + 2)
+		call nz,Writer_CalculateCRC32
+
+		pop hl	; expected crc bits 31-16
+		scf
+		adc hl,bc
+		jr nz,CrcError
+		pop hl	; expected crc bits 15-0
+		scf
+		adc hl,de
+CrcError:	ld hl,TextCrcError
+		jp nz,ExitWithError
+		ret
+
+
+; Skip zero-terminated string
+SkipZString:	call Reader_Read_DE_fast
+		and a
+		jr nz,SkipZString
+		ret
 
 ; a <- DOS error code
 CheckDOSError:	and a
@@ -114,7 +260,13 @@ ExitWithError:	call System_Print
 DosExit:	ld bc,1 * 256 + #62	; _TERM
 		jp #0005		; BDOS
 
-;
+
+; variables
+HeaderFlags:	db 0
+
+
+
+; strings
 TextWelcome:	db "Gunzip 1.0 by Grauw", 13, 10, 10, 0
 TextInflating:	db "Inflating ", 0
 TextTesting:	db "Testing ",0
@@ -127,12 +279,16 @@ TextUsage:	db "Usage: gunzip [options] <archive.gz> <outputfile>", 13, 10
 		db "  /q  Quiet mode, suppress messages.", 13, 10
 		db 13, 10
 		db "If no output file is specified, the archive will be tested.", 13, 10, 0
+TextNotGzip:	db "Not a GZIP file.", 13, 10, 0
+TextNotDeflate: db "Not compressed with DEFLATE.", 13, 10, 0
+TextUnknownFlag:db "Unknown flag.", 13, 10, 0
+TextSizeError:	db "Inflated size mismatch.", 13, 10, 0
+TextCrcError:	db "Inflated CRC32 mismatch.", 13, 10, 0
 
 
 
 	INCLUDE "System.asm"
 	INCLUDE "CLI.asm"
-	INCLUDE "Archive.asm"
 	INCLUDE "deflate/Inflate.asm"
 	INCLUDE "deflate/FixedAlphabets.asm"
 	INCLUDE "deflate/DynamicAlphabets.asm"
