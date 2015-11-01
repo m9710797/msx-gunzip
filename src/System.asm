@@ -59,18 +59,12 @@ System_Print:
 System_ThrowException_:
 	jp System_ThrowException
 System_ThrowException:
-	IF DEBUG
-	in a,(02EH)
-	ENDIF
 	pop de
 	call System_PrintExceptionMessage
 	jp DOS_Terminate
 
 ; hl = message
 System_ThrowExceptionWithMessage:
-	IF DEBUG
-	in a,(02EH)
-	ENDIF
 	pop de
 	push hl
 	call System_PrintExceptionMessage

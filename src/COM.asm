@@ -8,8 +8,6 @@ VIRTUAL_ALIGN: MACRO ?boundary
 	ENDM
 
 
-DEBUG: equ 1
-
 	org 100H
 
 IBUFFER_SIZE: equ 1000H
