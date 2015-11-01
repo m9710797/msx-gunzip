@@ -34,7 +34,7 @@ STACK_SIZE:	equ #0100	; make sure there's room for this much stack
 		ld a,(cli_quiet)
 		or a
 		ld hl,TextWelcome
-		call z,System_Print
+		call z,Print
 
 ; Print inflating/testing
 		ld a,(cli_quiet)
@@ -46,11 +46,11 @@ STACK_SIZE:	equ #0100	; make sure there's room for this much stack
 		ld hl,TextTesting
 		jr z,DoPrint
 		ld hl,TextInflating
-DoPrint:	call System_Print
+DoPrint:	call Print
 		ld hl,(cli_archivePath)
-		call System_Print
+		call Print
 		ld hl,TextDotDotDot
-		call System_Print
+		call Print
 SkipPrint:
 
 ; Open input file
@@ -244,6 +244,9 @@ SkipZString:	call Reader_Read_DE_fast
 		jr nz,SkipZString
 		ret
 
+
+; -- Various utility functions --
+
 ; a <- DOS error code
 CheckDOSError:	and a
 		ret z		; 0 -> no error
@@ -252,13 +255,83 @@ CheckDOSError:	and a
 		ld c,#66	; _EXPLAIN
 		call #0005	; BDOS
 		ld hl,scratch_buf
-		call System_PrintLn
+		call PrintLn
 		jr DosExit
 
 ; hl <- message
-ExitWithError:	call System_Print
+ExitWithError:	call Print
 DosExit:	ld bc,1 * 256 + #62	; _TERM
 		jp #0005		; BDOS
+
+
+; hl = value
+PrintHexHL:	ld a,h
+		push hl
+		call PrintHexA
+		pop hl
+		ld a,l
+		;jr PrintHexA
+
+; a = value
+PrintHexA:	push af
+		rrca
+		rrca
+		rrca
+		rrca
+		call PrintHexNibble
+		pop af
+		;jr PrintHexNibble
+
+; a = value, uses lower nibble
+PrintHexNibble:	and #0F
+		cp 10
+		ccf
+		adc a,"0"
+		daa
+		;jr PrintChar
+
+; a = character
+PrintChar:	ld iy,(#FCC0)	; EXPTBL-1
+		ld ix,#00A2	; CHPUT
+		jp #001C	; CALSLT
+
+; hl = string (0-terminated)
+PrintLn:	call Print
+PrintCrLf:	ld hl,TextCrLf
+		;jr Print
+
+; hl = string (0-terminated)
+Print:		ld a,(hl)
+		inc hl
+		and a
+		ret z
+		push hl
+		call PrintChar
+		pop hl
+		jr Print
+
+ThrowException:	pop de	; return address
+		call PrintException
+		jr DosExit
+
+; hl = message
+ThrowMessage:	pop de	; return address
+		push hl
+		call PrintException
+		pop hl
+		call PrintLn
+		jr DosExit
+
+; de = return address
+PrintException:	push de
+		ld hl,TextException
+		call Print
+		pop hl
+		dec hl
+		dec hl
+		dec hl	; before call
+		call PrintHexHL
+		jr PrintCrLf
 
 
 ; variables
@@ -270,7 +343,8 @@ HeaderFlags:	db 0
 TextWelcome:	db "Gunzip 1.0 by Grauw", 13, 10, 10, 0
 TextInflating:	db "Inflating ", 0
 TextTesting:	db "Testing ",0
-TextDotDotDot:	db "...", 13, 10, 0
+TextDotDotDot:	db "..."
+TextCrLf:	db 13, 10, 0
 TextNeedDos2:	db "MSX-DOS 2 is required.",13, 10, 0
 TextNoMemory:	db "Insufficient TPA space.", 13, 10, 0
 TextUsage:	db "Usage: gunzip [options] <archive.gz> <outputfile>", 13, 10
@@ -284,17 +358,17 @@ TextNotDeflate: db "Not compressed with DEFLATE.", 13, 10, 0
 TextUnknownFlag:db "Unknown flag.", 13, 10, 0
 TextSizeError:	db "Inflated size mismatch.", 13, 10, 0
 TextCrcError:	db "Inflated CRC32 mismatch.", 13, 10, 0
+TextException:	db "An exception occurred on address: ", 0
 
 
 
-	INCLUDE "System.asm"
+
 	INCLUDE "CLI.asm"
 	INCLUDE "deflate/Inflate.asm"
 	INCLUDE "deflate/FixedAlphabets.asm"
 	INCLUDE "deflate/DynamicAlphabets.asm"
 	INCLUDE "deflate/Reader.asm"
 	INCLUDE "deflate/Writer.asm"
-code_end:
 
 ; lookup table to speedup crc32 calculations, must be 256-byte aligned
 		ds (256 - ($ & 255) & 255)

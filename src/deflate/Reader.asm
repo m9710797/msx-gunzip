@@ -51,7 +51,7 @@ Trap:	; trap next read
 
 EofError:
 	ld hl,Reader_endOfDataError
-	call System_ThrowExceptionWithMessage
+	call ThrowMessage
 	ENDP
 
 

@@ -30,21 +30,21 @@ ConstructDynamicAlphabets: PROC
 	call Reader_ReadBitsInline_5_DE
 	inc a
 	cp (DynamicAlphabets_MAX_LITERALLENGTHCODELENGTHS & 0FFH) + 1
-	call nc,System_ThrowException
+	call nc,ThrowException
 	ld (hlit),a
 
 	; Read hdist
 	call Reader_ReadBitsInline_5_DE
 	inc a
 	cp DynamicAlphabets_MAX_DISTANCECODELENGTHS + 1
-	call nc,System_ThrowException
+	call nc,ThrowException
 	ld (hdist),a
 
 	; Read hclen
 	call Reader_ReadBitsInline_4_DE
 	add a,4
 	cp DynamicAlphabets_MAX_HEADERCODELENGTHS + 1
-	call nc,System_ThrowException
+	call nc,ThrowException
 
 	; Clear header code lengths
 	exx
@@ -80,7 +80,7 @@ Store:	ld (iy + 0),a  ; offset is dynamically changed!
 	ld de,(out_ptr)
 	or a
 	sbc hl,de
-	call c,System_ThrowException
+	call c,ThrowException
 
 	; Read literal length distance code lengths
 	ld bc,(hdist)
@@ -104,7 +104,7 @@ Store:	ld (iy + 0),a  ; offset is dynamically changed!
 	ld de,(out_ptr)
 	or a
 	sbc hl,de
-	call c,System_ThrowException
+	call c,ThrowException
 
 	; Construct distance alphabet
 	ld bc,(hdist) ; bc = number of symbols
@@ -119,7 +119,7 @@ Store:	ld (iy + 0),a  ; offset is dynamically changed!
 	ld de,(out_ptr)
 	or a
 	sbc hl,de
-	call c,System_ThrowException
+	call c,ThrowException
 	ret
 
 	ENDP

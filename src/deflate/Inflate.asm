@@ -70,7 +70,7 @@ Inflate_InflateFixedCompressed:
 	ld de,(out_ptr)
 	or a
 	sbc hl,de
-	call c,System_ThrowException
+	call c,ThrowException
 
 	ld bc,FixedAlphabets_distanceCodeLengthsCount
 	ld de,FixedAlphabets_distanceCodeLengths
@@ -81,7 +81,7 @@ Inflate_InflateFixedCompressed:
 	ld de,(out_ptr)
 	or a
 	sbc hl,de
-	call c,System_ThrowException
+	call c,ThrowException
 	jr Inflate_DoInflate
 
 Inflate_InflateDynamicCompressed:
@@ -504,6 +504,11 @@ Inflate_CopyAndNext_SetBigDistance:
 	ex af,af'
 	ld e,a
 	jp Writer_Copy_AndNext
+
+; inline-able version
+System_ThrowException_:
+	jp ThrowException
+System_ThrowException_len: equ $ - System_ThrowException_
 
 ;
 Inflate_literalLengthSymbols:
