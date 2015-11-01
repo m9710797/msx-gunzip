@@ -60,7 +60,7 @@ Reader_Construct:
 	ld a,00000001B  ; read only
 	ld c,43H; _OPEN
 	call #0005	; BDOS
-	call Application_CheckDOSError
+	call CheckDOSError
 	ld a,b
 	ld (Reader_fileHandle),a
 
@@ -72,7 +72,7 @@ Reader_Destruct:
 	ld b,a
 	ld c,45H ; _CLOSE
 	call #0005	; BDOS
-	jp Application_CheckDOSError
+	jp CheckDOSError
 
 ; Modifies: af, bc, de, hl
 Reader_FillBuffer:
@@ -83,7 +83,7 @@ Reader_FillBuffer:
 	ld c,48H ; _READ
 	call #0005	; BDOS
 	cp 0C7H ; .EOF
-	jp nz,Application_CheckDOSError
+	jp nz,CheckDOSError
 	ld (Reader_endOfData),a	; any non-zero value
 	ret
 

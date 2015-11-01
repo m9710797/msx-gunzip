@@ -21,15 +21,15 @@ Archive_Extract:
 	call Reader_Read_DE_fast
 	cp 31  ; gzip signature (1)
 	ld hl,Archive_notGzipError
-	jp nz,Application_TerminateWithError
+	jp nz,ExitWithError
 	call Reader_Read_DE_fast
 	cp 139  ; gzip signature (1)
 	ld hl,Archive_notGzipError
-	jp nz,Application_TerminateWithError
+	jp nz,ExitWithError
 	call Reader_Read_DE_fast
 	cp 8  ; deflate compression ID (1)
 	ld hl,Archive_notDeflateError
-	jp nz,Application_TerminateWithError
+	jp nz,ExitWithError
 
 	call Reader_Read_DE_fast
 	ld (Archive_flags),a
@@ -39,7 +39,7 @@ Archive_Extract:
 	ld a,(Archive_flags)
 	and Archive_RESERVED
 	ld hl,Archive_unknownFlagError
-	jp nz,Application_TerminateWithError
+	jp nz,ExitWithError
 
 	ld a,(Archive_flags)
 	and Archive_FEXTRA
@@ -90,11 +90,11 @@ no_skip_extra:
 
 	call Archive_VerifyISIZE
 	ld hl,Archive_isizeMismatchError
-	jp nz,Application_TerminateWithError
+	jp nz,ExitWithError
 
 	call Archive_VerifyCRC32
 	ld hl,Archive_crc32MismatchError
-	jp nz,Application_TerminateWithError
+	jp nz,ExitWithError
 	ret
 
 

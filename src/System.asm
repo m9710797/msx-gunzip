@@ -64,7 +64,7 @@ System_ThrowException_len: equ $ - System_ThrowException_
 System_ThrowException:
 	pop de
 	call System_PrintExceptionMessage
-	jp DOS_Terminate
+	jp DosExit
 
 ; hl = message
 System_ThrowExceptionWithMessage:
@@ -73,7 +73,7 @@ System_ThrowExceptionWithMessage:
 	call System_PrintExceptionMessage
 	pop hl
 	call System_PrintLn
-	jp DOS_Terminate
+	jp DosExit
 
 ; de = address
 System_PrintExceptionMessage:

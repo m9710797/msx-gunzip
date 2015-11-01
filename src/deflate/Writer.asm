@@ -19,7 +19,7 @@ Writer_Construct:
 	ld a,00000010B  ; write only
 	ld bc,0 * 256 + 44H ; _CREATE
 	call #0005	; BDOS
-	call Application_CheckDOSError
+	call CheckDOSError
 	ld a,b
 	ld (Writer_fileHandle),a
 	ret
@@ -32,7 +32,7 @@ Writer_Destruct:
 	ret z
 	ld c,45H ; _CLOSE
 	call #0005	; BDOS
-	jp Application_CheckDOSError
+	jp CheckDOSError
 
 ; a = value
 ; hl = Writer_bufPos
@@ -67,7 +67,7 @@ Writer_Copy_AndNext: PROC
 	cp OBUFFER >> 8
 	jr c,Wrap
 WrapContinue:
-	ld a,OBUFFER_END_HIGH - 3
+	ld a,(OBUFFER_END >> 8) - 3
 	cp h  ; does the source have a 512 byte margin without wrapping?
 	jr c,Slow
 	cp d  ; does the destination a 512 byte margin without wrapping?
@@ -243,7 +243,7 @@ Writer_FlushBuffer:
 	sbc hl,de
 	ld c,49H ; _WRITE
 	call #0005	; BDOS
-	jp Application_CheckDOSError
+	jp CheckDOSError
 
 ; Modifies: hl, bc
 

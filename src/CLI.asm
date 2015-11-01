@@ -33,7 +33,7 @@ Option:
 	cp "Q"
 	jr z,OptionQuiet
 	ld hl,CLI_unknownOptionError
-	jp Application_TerminateWithError
+	jp ExitWithError
 
 OptionQuiet:
 	ld (cli_quiet),a	; any non-zero value
@@ -44,7 +44,7 @@ OptionQuiet:
 	cp " "
 	jr z,Next
 	ld hl,CLI_unknownOptionError
-	jp Application_TerminateWithError
+	jp ExitWithError
 
 Path:
 	ld hl,(cli_archivePath)
@@ -67,7 +67,7 @@ OutputPath:
 	ld a,h
 	or l
 	ld hl,CLI_multiplePathsError
-	call nz,Application_TerminateWithError
+	call nz,ExitWithError
 	ld (cli_outputPath),de
 	jr ParsePath
 

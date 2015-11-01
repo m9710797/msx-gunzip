@@ -23,7 +23,7 @@ Inflate_InflateBlock:
 	jr c,Inflate_InflateFixedCompressed
 	jr z,Inflate_InflateDynamicCompressed
 	ld hl,Inflate_invalidBlockTypeError
-	jp Application_TerminateWithError
+	jp ExitWithError
 
 Inflate_InflateUncompressed: PROC
 	ld de,(Reader_bufPos)
@@ -39,7 +39,7 @@ Inflate_InflateUncompressed: PROC
 	scf
 	adc hl,bc
 	ld hl,Inflate_invalidLengthError
-	jp nz,Application_TerminateWithError
+	jp nz,ExitWithError
 
 	ld a,b
 	or c
