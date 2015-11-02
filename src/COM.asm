@@ -357,8 +357,8 @@ UncompEnd:	ld (Reader_bufPos),de
 
 
 ; A block compressed using the fixed alphabet
-FixedComp:	ld bc,FixedAlphabets_literalLengthCodeLengthsCount
-		ld de,FixedAlphabets_literalLengthCodeLengths
+FixedComp:	ld bc,FixedLitCount
+		ld de,FixedLitLen
 		ld hl,LiteralTree
 		ld iy,Inflate_literalLengthSymbols
 		call generate_huffman
@@ -368,8 +368,8 @@ FixedComp:	ld bc,FixedAlphabets_literalLengthCodeLengthsCount
 		sbc hl,de		;;  generated code?
 		call c,ThrowException	;;
 
-		ld bc,FixedAlphabets_distanceCodeLengthsCount
-		ld de,FixedAlphabets_distanceCodeLengths
+		ld bc,FixedDistCount
+		ld de,FixedDistLen
 		ld hl,DistanceTree
 		ld iy,Inflate_distanceSymbols
 		call generate_huffman
@@ -522,14 +522,35 @@ TextLengthErr:	db "Invalid length.", 13, 10, 0
 
 
 	INCLUDE "deflate/Inflate.asm"
-	INCLUDE "deflate/FixedAlphabets.asm"
 	INCLUDE "deflate/DynamicAlphabets.asm"
 	INCLUDE "deflate/Reader.asm"
 	INCLUDE "deflate/Writer.asm"
 
-; lookup table to speedup crc32 calculations, must be 256-byte aligned
+; -- The fixed alphabet --
+; Lengths of the literal symbols
+FixedLitLen:	db 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8  ; 0-143: 8
+		db 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+		db 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+		db 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+		db 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+		db 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+		db 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9  ; 144-255: 9
+		db 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+		db 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+		db 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+		db 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 7, 7, 7, 7, 7, 7, 7, 7  ; 256-279: 7
+		db 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8  ; 280-287: 8
+FixedLitCount:	equ $ - FixedLitLen
+
+; Lengths of the distance symbols
+FixedDistLen:	db 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
+		db 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
+FixedDistCount: equ $ - FixedDistLen
+
+
+; -- CRC32 lookup table, must be 256-byte aligned
 		ds (256 - ($ & 255) & 255)
-CRC32Table: ; uint32_t[256]
+CRC32Table:	; uint32_t[256]
 		; bits 0-7
 		db #00, #96, #2c, #ba, #19, #8f, #35, #a3
 		db #32, #a4, #1e, #88, #2b, #bd, #07, #91
