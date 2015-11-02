@@ -446,7 +446,6 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 		ld bc,MAX_HEADER_LEN
 		ld de,HdrCodeLengths ; de = length of symbols
 		ld hl,HeaderTree
-		push hl
 		ld iy,HeaderSymbols
 		call GenerateHuffman
 		ld hl,HeaderTreeEnd	;; Sanity check:
@@ -460,11 +459,10 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 		ld ix,(hlit)
 		add ix,bc
 		inc ixh	; +1 for nested 8-bit loop
-		pop iy	; iy = HeaderTree
 		ld hl,LLDCodeLengths
 		pop de
 		pop bc
-		call DecodeHeader
+		call HeaderTree		; decode the header
 		call Reader_FinishReadBitInline
 
 ; Construct literal length alphabet
@@ -760,7 +758,6 @@ HeaderSymbols:	db WriteLen_0_len
 ; de = inline Reader_bufPos
 ; hl = literal/length/distance code lengths position
 ; ix = loop counter for nested 8-bit loop
-; iy = header code alphabet root
 
 ; Header code alphabet symbols 0-15
 WriteLen_0:	ld (hl),0
@@ -854,24 +851,17 @@ HdrZFill11:	call Reader_ReadBitsInline_7_DE
 HdrZFill11Len:	equ $ - HdrZFill11
 
 
-; c = inline bit reader state
-; de = inline Reader_bufPos
-; hl = literal/length/distance code lengths position
-; ix = loop counter for nested 8-bit loop
-; iy = header code alphabet root
-DecodeHeader:	jp iy	; TODO optimize this??
-
 HeaderNext:	inc hl
 		dec ixl
-		jp nz,DecodeHeader
+		jp nz,HeaderTree
 		dec ixh
-		jr nz,DecodeHeader
+		jp nz,HeaderTree
 		ret
 
 ; a = fill value
 ; b = repeat count
 FillLoop:	dec b
-		jr z,DecodeHeader
+		jp z,HeaderTree
 HeaderFill:	ld (hl),a
 		inc hl
 		dec ixl
@@ -881,7 +871,7 @@ HeaderFill:	ld (hl),a
 		ret
 
 
-; -- Various utility functions --
+; === Utility functions ===
 
 ; a <- DOS error code
 CheckDOSError:	and a
