@@ -312,7 +312,8 @@ SkipZString:	call Reader_Read_DE_fast
 		ret
 
 
-; -- Inflate decompression --
+; === Inflate decompression ===
+; -- decompress one block --
 
 ; a = block type
 InflateBlock:	and a
@@ -381,13 +382,121 @@ FixedComp:	ld bc,FixedLitCount
 		jr DoInflate
 
 ; A block compressed using a dynamic alphabet
-DynamicComp:	call ConstructDynamicAlphabets
+DynamicComp:	call BuildDynAlpha
 DoInflate:	ld iy,Writer_Write_AndNext
 		call Reader_PrepareReadBitInline
 		ld hl,(Writer_bufPos)
 		call LiteralTree
 		ld (Writer_bufPos),hl
 		jp Reader_FinishReadBitInline
+
+
+; -- Create dynamic alphabet --
+
+MAX_HEADER_LEN:	equ 19	; maximum number of 'header code lengths'
+MAX_LIT_LEN:	equ 286	; maximum number of 'literal/length code lengths'
+MAX_DIST_LEN:	equ 30	; maximum number of 'distance code lengths'
+
+BuildDynAlpha:
+; Read hlit
+		call Reader_PrepareReadBitInline
+		call Reader_ReadBitsInline_5_DE
+		inc a
+		cp (MAX_LIT_LEN & 0FFH) + 1
+		call nc,ThrowException
+		ld (hlit),a
+
+; Read hdist
+		call Reader_ReadBitsInline_5_DE
+		inc a
+		cp MAX_DIST_LEN + 1
+		call nc,ThrowException
+		ld (hdist),a
+
+; Read hclen
+		call Reader_ReadBitsInline_4_DE
+		add a,4
+		cp MAX_HEADER_LEN + 1
+		call nc,ThrowException
+
+; Clear header code lengths
+		exx
+		ld hl,HdrCodeLengths
+		ld de,HdrCodeLengths + 1
+		ld bc,MAX_HEADER_LEN - 1
+		ld (hl),b ; 0
+		ldir
+		exx
+
+; Read header code lengths
+		ld ixl,a	; hclen
+		ld hl,DynamicAlphabets_headerCodeOrder
+		ld iy,HdrCodeLengths
+DynLoop:	ld a,(hl)
+		inc hl
+		ld (DynStore + 2),a ; self modifying code!
+		call Reader_ReadBitsInline_3_DE ; changes B
+DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
+		dec ixl
+		jr nz,DynLoop
+		push bc
+		push de
+
+; Construct header code alphabet
+		ld bc,MAX_HEADER_LEN
+		ld de,HdrCodeLengths ; de = length of symbols
+		ld hl,HeaderTree
+		push hl
+		ld iy,DynamicAlphabets_headerCodeSymbols
+		call generate_huffman
+		ld hl,HeaderTreeEnd
+		ld de,(out_ptr)
+		or a
+		sbc hl,de
+		call c,ThrowException
+
+; Read literal length distance code lengths
+		ld bc,(hdist)
+		ld ix,(hlit)
+		add ix,bc
+		inc ixh	; +1 for nested 8-bit loop
+		pop iy	; iy = HeaderTree
+		ld hl,LLDCodeLengths
+		pop de
+		pop bc
+		call DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths
+		call Reader_FinishReadBitInline
+
+; Construct literal length alphabet
+		ld bc,(hlit) ; bc = number of symbols
+		ld de,LLDCodeLengths ; de = length of symbols
+		ld hl,LiteralTree
+		ld iy,Inflate_literalLengthSymbols	; iy = literal/length symbol handlers table
+		call generate_huffman
+		ld hl,LiteralTreeEnd
+		ld de,(out_ptr)
+		or a
+		sbc hl,de
+		call c,ThrowException
+
+; Construct distance alphabet
+		ld bc,(hdist) ; bc = number of symbols
+		ld hl,LLDCodeLengths
+		ld de,(hlit)
+		add hl,de
+		ex de,hl	; de = length of symbols
+		ld hl,DistanceTree
+		ld iy,Inflate_distanceSymbols	; iy = distance symbol handlers table
+		call generate_huffman
+		ld hl,DistanceTreeEnd
+		ld de,(out_ptr)
+		or a
+		sbc hl,de
+		call c,ThrowException
+		ret
+
+
+
 
 
 ; -- Various utility functions --
@@ -479,14 +588,21 @@ PrintException:	push de
 		jr PrintCrLf
 
 
-; -- variables --
-; set by parsing the gzip header
+; === variables ===
+; -- set by parsing the gzip header --
 HeaderFlags:	db 0
 
-; filled in by parsing the command line
+; -- filled in by parsing the command line --
 InputPath:	dw 0	; zero-terminated string to input filename
 OutputPath:	dw 0	; zero terminated string to output filename (optional)
 Quiet:		db 0	; non-zero when running in 'quite' mode
+
+; -- Used during building the dynamic alphabet --
+; Strictly speaking we only need to store the LSB of the following two values.
+; But also storing the MSB allows for simpler code, so the space overhead here
+; is more than made up in smaller code size.
+hlit:		dw 256	; MSB fixed at '1'
+hdist:		dw 0	; MSB fixed at '0'
 
 
 
@@ -686,6 +802,25 @@ CRC32Table:	; uint32_t[256]
 		db #ae, #d9, #40, #37, #a9, #de, #47, #30
 		db #bd, #ca, #53, #24, #ba, #cd, #54, #23
 		db #b3, #c4, #5d, #2a, #b4, #c3, #5a, #2d
+
+
+
+; Overlap 'HdrCodeLengths' and 'LLDCodeLengths', they are
+; not simultaneously life.
+;   TODO Does 'glass' have a union feature?
+; These are scratch buffers, they can be reused outside ConstructDynamicAlphabets
+
+; Header code lengths
+HdrCodeLengths:	; ds MAX_HEADER_LEN
+; Literal/length + Distance code lengths
+LLDCodeLengths:	ds VIRTUAL MAX_LIT_LEN + MAX_DIST_LEN
+
+; Generated header-decode tree
+HeaderTree:	ds VIRTUAL (8+5) * (MAX_HEADER_LEN - 1)
+HeaderTreeEnd:	equ $
+
+
+
 
 LiteralTree:	ds VIRTUAL (8 +  5) * (288 - 1)
 LiteralTreeEnd:	equ $
