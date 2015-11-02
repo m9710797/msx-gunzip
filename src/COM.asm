@@ -372,7 +372,7 @@ FixedComp:	ld bc,FixedLitCount
 		ld bc,FixedDistCount
 		ld de,FixedDistLen
 		ld hl,DistanceTree + 1
-		ld iy,Inflate_distanceSymbols
+		ld iy,DistSymbols
 		call GenerateHuffman
 		ld hl,DistanceTreeEnd	;; Sanity check
 		ld de,(HuffOutPtr)	;;
@@ -480,13 +480,13 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 		call c,ThrowException	;;
 
 ; Construct distance alphabet
-		ld bc,(hdist) ; bc = number of symbols
+		ld bc,(hdist)		; bc = number of symbols
 		ld hl,LLDCodeLengths
 		ld de,(hlit)
 		add hl,de
-		ex de,hl	; de = length of symbols
+		ex de,hl		; de = length of symbols
 		ld hl,DistanceTree + 1
-		ld iy,Inflate_distanceSymbols	; iy = distance symbol handlers table
+		ld iy,DistSymbols	; iy = distance symbol handlers table
 		call GenerateHuffman
 		ld hl,DistanceTreeEnd	;;
 		ld de,(HuffOutPtr)	;;
@@ -2142,9 +2142,283 @@ CopySetLength0:	ld b,0
 		jp DistanceTree
 
 
+; -- Symbol routines used by the 'distance' Huffman tree
 
+DistSymbols:	db CopyDist0Len
+		dw CopyDist0
+		db CopyDist1Len
+		dw CopyDist1
+		db CopyDist2Len
+		dw CopyDist2
+		db CopyDist3Len
+		dw CopyDist3
+		db CopyDist4Len
+		dw CopyDist4
+		db CopyDist5Len
+		dw CopyDist5
+		db CopyDist6Len
+		dw CopyDist6
+		db CopyDist7Len
+		dw CopyDist7
+		db CopyDist8Len
+		dw CopyDist8
+		db CopyDist9Len
+		dw CopyDist9
+		db CopyDist10Len
+		dw CopyDist10
+		db CopyDist11Len
+		dw CopyDist11
+		db CopyDist12Len
+		dw CopyDist12
+		db CopyDist13Len
+		dw CopyDist13
+		db CopyDist14Len
+		dw CopyDist14
+		db CopyDist15Len
+		dw CopyDist15
+		db CopyDist16Len
+		dw CopyDist16
+		db CopyDist17Len
+		dw CopyDist17
+		db CopyDist18Len
+		dw CopyDist18
+		db CopyDist19Len
+		dw CopyDist19
+		db CopyDist20Len
+		dw CopyDist20
+		db CopyDist21Len
+		dw CopyDist21
+		db CopyDist22Len
+		dw CopyDist22
+		db CopyDist23Len
+		dw CopyDist23
+		db CopyDist24Len
+		dw CopyDist24
+		db CopyDist25Len
+		dw CopyDist25
+		db CopyDist26Len
+		dw CopyDist26
+		db CopyDist27Len
+		dw CopyDist27
+		db CopyDist28Len
+		dw CopyDist28
+		db CopyDist29Len
+		dw CopyDist29
+		db ThrowInlineLen
+		dw ThrowInline
+		db ThrowInlineLen
+		dw ThrowInline
 
+; For all of these routines, the calling convention is like this:
+; bc = length of the to-be-copied block
+; 'c = inline bit reader state
+; 'de = inline Reader_bufPos
+; 'hl = Writer_bufPos
+; iy = Writer_Write_AndNext
 
+; Distance alphabet symbols 0-29
+CopyDist0:	push hl
+		exx
+		ld de,1 - 1
+		jp Writer_Copy_AndNext
+CopyDist0Len:	equ $ - CopyDist0
+
+CopyDist1:	push hl
+		exx
+		ld de,2 - 1
+		jp Writer_Copy_AndNext
+CopyDist1Len:	equ $ - CopyDist1
+
+CopyDist2:	push hl
+		exx
+		ld de,3 - 1
+		jp Writer_Copy_AndNext
+CopyDist2Len:	equ $ - CopyDist2
+
+CopyDist3:	push hl
+		exx
+		ld de,4 - 1
+		jp Writer_Copy_AndNext
+CopyDist3Len:	equ $ - CopyDist3
+
+CopyDist4:	call Reader_ReadBitsInline_1_DE
+		add a,5 - 1
+		jp CopySmallDist
+CopyDist4Len:	equ $ - CopyDist4
+
+CopyDist5:	call Reader_ReadBitsInline_1_DE
+		add a,7 - 1
+		jp CopySmallDist
+CopyDist5Len:	equ $ - CopyDist5
+
+CopyDist6:	call Reader_ReadBitsInline_2_DE
+		add a,9 - 1
+		jp CopySmallDist
+CopyDist6Len:	equ $ - CopyDist6
+
+CopyDist7:	call Reader_ReadBitsInline_2_DE
+		add a,13 - 1
+		jp CopySmallDist
+CopyDist7Len:	equ $ - CopyDist7
+
+CopyDist8:	call Reader_ReadBitsInline_3_DE
+		add a,17 - 1
+		jp CopySmallDist
+CopyDist8Len:	equ $ - CopyDist8
+
+CopyDist9:	call Reader_ReadBitsInline_3_DE
+		add a,25 - 1
+		jp CopySmallDist
+CopyDist9Len:	equ $ - CopyDist9
+
+CopyDist10:	call Reader_ReadBitsInline_4_DE
+		add a,33 - 1
+		jp CopySmallDist
+CopyDist10Len:	equ $ - CopyDist10
+
+CopyDist11:	call Reader_ReadBitsInline_4_DE
+		add a,49 - 1
+		jp CopySmallDist
+CopyDist11Len:	equ $ - CopyDist11
+
+CopyDist12:	call Reader_ReadBitsInline_5_DE
+		add a,65 - 1
+		jp CopySmallDist
+CopyDist12Len:	equ $ - CopyDist12
+
+CopyDist13:	call Reader_ReadBitsInline_5_DE
+		add a,97 - 1
+		jp CopySmallDist
+CopyDist13Len:	equ $ - CopyDist13
+
+CopyDist14:	call Reader_ReadBitsInline_6_DE
+		add a,129 - 1
+		jp CopySmallDist
+CopyDist14Len:	equ $ - CopyDist14
+
+CopyDist15:	call Reader_ReadBitsInline_6_DE
+		add a,193 - 1
+		jp CopySmallDist
+CopyDist15Len:	equ $ - CopyDist15
+
+CopyDist16:	call Reader_ReadBitsInline_7_DE
+		push hl
+		exx
+		ld e,a
+		ld d,257 - 1 >> 8
+		jp Writer_Copy_AndNext
+CopyDist16Len:	equ $ - CopyDist16
+
+CopyDist17:	call Reader_ReadBitsInline_7_DE
+		push hl
+		exx
+		add a,385 - 1 & 0FFH
+		ld e,a
+		ld d,385 - 1 >> 8
+		jp Writer_Copy_AndNext
+CopyDist17Len:	equ $ - CopyDist17
+
+CopyDist18:	call Reader_ReadBitsInline_8_DE
+		push hl
+		exx
+		ld e,a
+		ld d,513 - 1 >> 8
+		jp Writer_Copy_AndNext
+CopyDist18Len:	equ $ - CopyDist18
+
+CopyDist19:	call Reader_ReadBitsInline_8_DE
+		push hl
+		exx
+		ld e,a
+		ld d,769 - 1 >> 8
+		jp Writer_Copy_AndNext
+CopyDist19Len:	equ $ - CopyDist19
+
+CopyDist20:	call Reader_ReadBitsInline_8_DE
+		ex af,af'
+		call Reader_ReadBitsInline_1_DE
+		add a,1025 - 1 >> 8
+		jp CopyBigDist
+CopyDist20Len:	equ $ - CopyDist20
+
+CopyDist21:	call Reader_ReadBitsInline_8_DE
+		ex af,af'
+		call Reader_ReadBitsInline_1_DE
+		add a,1537 - 1 >> 8
+		jp CopyBigDist
+CopyDist21Len:	equ $ - CopyDist21
+
+CopyDist22:	call Reader_ReadBitsInline_8_DE
+		ex af,af'
+		call Reader_ReadBitsInline_2_DE
+		add a,2049 - 1 >> 8
+		jp CopyBigDist
+CopyDist22Len:	equ $ - CopyDist22
+
+CopyDist23:	call Reader_ReadBitsInline_8_DE
+		ex af,af'
+		call Reader_ReadBitsInline_2_DE
+		add a,3073 - 1 >> 8
+		jp CopyBigDist
+CopyDist23Len:	equ $ - CopyDist23
+
+CopyDist24:	call Reader_ReadBitsInline_8_DE
+		ex af,af'
+		call Reader_ReadBitsInline_3_DE
+		add a,4097 - 1 >> 8
+		jp CopyBigDist
+CopyDist24Len:	equ $ - CopyDist24
+
+CopyDist25:	call Reader_ReadBitsInline_8_DE
+		ex af,af'
+		call Reader_ReadBitsInline_3_DE
+		add a,6145 - 1 >> 8
+		jp CopyBigDist
+CopyDist25Len:	equ $ - CopyDist25
+
+CopyDist26:	call Reader_ReadBitsInline_8_DE
+		ex af,af'
+		call Reader_ReadBitsInline_4_DE
+		add a,8193 - 1 >> 8
+		jp CopyBigDist
+CopyDist26Len:	equ $ - CopyDist26
+
+CopyDist27:	call Reader_ReadBitsInline_8_DE
+		ex af,af'
+		call Reader_ReadBitsInline_4_DE
+		add a,12289 - 1 >> 8
+		jp CopyBigDist
+CopyDist27Len:	equ $ - CopyDist27
+
+CopyDist28:	call Reader_ReadBitsInline_8_DE
+		ex af,af'
+		call Reader_ReadBitsInline_5_DE
+		add a,16385 - 1 >> 8
+		jp CopyBigDist
+CopyDist28Len:	equ $ - CopyDist28
+
+CopyDist29:	call Reader_ReadBitsInline_8_DE
+		ex af,af'
+		call Reader_ReadBitsInline_5_DE
+		add a,24577 - 1 >> 8
+		jp CopyBigDist
+CopyDist29Len:	equ $ - CopyDist29
+
+; a = distance - 1
+CopySmallDist:	push hl
+		exx
+		ld e,a
+		ld d,0
+		jp Writer_Copy_AndNext
+
+; a  = MSB(distance - 1)
+; a' = LSB(distance - 1)
+CopyBigDist:	push hl
+		exx
+		ld d,a
+		ex af,af'
+		ld e,a
+		jp Writer_Copy_AndNext
 
 
 ; === Utility functions ===
@@ -2290,7 +2564,6 @@ TextLengthErr:	db "Invalid length.", 13, 10, 0
 
 
 
-	INCLUDE "deflate/Inflate.asm"
 	INCLUDE "deflate/Reader.asm"
 	INCLUDE "deflate/Writer.asm"
 
