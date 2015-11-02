@@ -317,7 +317,7 @@ InflateBlock:	and a
 		jr z,Uncompressed
 		cp 2
 		jr c,FixedComp
-		jr z,DynamicComp
+		jp z,DynamicComp
 		ld hl,TextBlockErr
 		jp ExitWithError
 
@@ -346,12 +346,14 @@ Uncompressed:	ld de,(InputBufPos)
 		inc b
 		ld c,b
 		ld b,a
+		ld hl,(OutputBufPos)
 UncompLoop:	call ReadByte
-		call WriteByteSlow
+		call WriteByte
 		djnz UncompLoop
 		dec c
 		jr nz,UncompLoop
-UncompEnd:	ld (InputBufPos),de
+UncompEnd:	ld (OutputBufPos),hl
+		ld (InputBufPos),de
 		ret
 
 
@@ -2784,23 +2786,23 @@ CopySplit2:	push bc
 
 ; a = value
 ; de,bc <- unchanged
-; TODO remove this
-WriteByteSlow:	ld hl,(OutputBufPos)
-		ld (hl),a
+WriteByte:	ld (hl),a
 		inc l
-		ld a,l
-		ld (OutputBufPos),a
-		ret nz
+		ret nz		; crosses 256-byte boundary?
+
 		inc h
 		ld a,h
-		ld (OutputBufPos + 1),a
 		cp OutputBufEnd >> 8
-		ret nz
+		ret nz		; end of buffer reached?
+
+		ld (OutputBufPos),hl	; OutputBufEnd
 		;jp FinishBlock
+		; hl = OutputBufPos = OutputBuffer
 
 
 ; 32kb block finished, update OutputCount, update Crc32Value and restart at
 ; start of buffer
+; hl <- OutputBuffer
 FinishBlock:	push bc
 		push de
 
