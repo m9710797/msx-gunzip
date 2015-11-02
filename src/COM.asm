@@ -62,8 +62,8 @@ SkipPrint:
 		call #0005	; BDOS
 		call CheckDOSError
 		ld a,b
-		ld (Reader_fileHandle),a
-		call Reader_FillBuffer	; fill buffer with initial content
+		ld (InFileHandle),a
+		call FillInBuffer	; fill buffer with initial content
 
 ; Open output file
 		ld de,(OutputPath)
@@ -75,14 +75,14 @@ SkipPrint:
 		call #0005	; BDOS
 		call CheckDOSError
 		ld a,b
-		ld (Writer_fileHandle),a
+		ld (OutFileHandle),a
 NoOutputFile:
 
 		call GzipExtract
 
 ; Close output file
-		call Writer_FlushBuffer
-		ld a,(Writer_fileHandle)
+		call FlushBuffer
+		ld a,(OutFileHandle)
 		ld b,a
 		inc a
 		jr z,SkipCloseOutput
@@ -92,12 +92,12 @@ NoOutputFile:
 SkipCloseOutput:
 
 ; Close input file
-		ld a,(Reader_fileHandle)
+		ld a,(InFileHandle)
 		ld b,a
 		ld c,#45	; _CLOSE
 		call #0005	; BDOS
 		jp CheckDOSError
-		; -- done -- 
+		; -- done --
 
 
 ; -- Command line parser --
@@ -167,30 +167,30 @@ FLAG_NAME:	equ #08
 FLAG_COMMENT:	equ #10
 FLAG_RESERVED:	equ #20	 ; #E0
 
-		call Reader_PrepareReadBitInline
+		call PrepareRead
 ; Check two signature bytes
-		call Reader_Read_DE_fast
+		call ReadByte
 		cp 31  ; gzip signature (1)
 		ld hl,TextNotGzip
 		jp nz,ExitWithError
-		call Reader_Read_DE_fast
+		call ReadByte
 		cp 139  ; gzip signature (1)
 		;ld hl,TextNotGzip  ; hl not changed
 		jp nz,ExitWithError
 
 ; Check compression algorithm
-		call Reader_Read_DE_fast
+		call ReadByte
 		cp 8  ; deflate compression ID (1)
 		ld hl,TextNotDeflate
 		jp nz,ExitWithError
 
 ; Read flags
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld (HeaderFlags),a
 
 ; Skip mtime[4], xfl, os
-		ld hl,6	
-		call Reader_Skip_DE
+		ld hl,6
+		call SkipInputBytes
 
 ; Check for unknown flags
 		ld a,(HeaderFlags)
@@ -202,11 +202,11 @@ FLAG_RESERVED:	equ #20	 ; #E0
 		ld a,(HeaderFlags)
 		and FLAG_EXTRA
 		jr z,NoSkipExtra
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld l,a
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld h,a
-		call Reader_Skip_DE
+		call SkipInputBytes
 NoSkipExtra:
 
 ; Skip name
@@ -223,59 +223,59 @@ NoSkipExtra:
 		ld a,(HeaderFlags)
 		and FLAG_HCRC
 		ld hl,2
-		call nz,Reader_Skip_DE
+		call nz,SkipInputBytes
 
-		call Reader_FinishReadBitInline
-	
+		call FinishRead
+
 ; Decompress all blocks in the gz file
-InflateLoop:	call Reader_PrepareReadBitInline
-		call Reader_ReadBitsInline_1_DE
+InflateLoop:	call PrepareRead
+		call Read1Bit
 		push af
-		call Reader_ReadBitsInline_2_DE
+		call Read2Bits
 		push af
-		call Reader_FinishReadBitInline
+		call FinishRead
 		pop af
 		call InflateBlock
 		pop af
 		or a
 		jr z,InflateLoop
-	
+
 ; Verify the decompressed data
 ; Read expected values from file
-		call Reader_PrepareReadBitInline
-		call Reader_Read_DE_fast
+		call PrepareRead
+		call ReadByte
 		ld l,a	; bits 7-0
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld h,a	; bits 15-8
 		push hl	; expected crc bits 15-0
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld l,a	; bits 23-16
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld h,a	; bits 31-24
 		push hl; expected crc bits 31-16
 
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld l,a	; bits 7-0
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld h,a	; bits 15-8
 		push hl	; expected-size bits 15-0
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld l,a	; bits 23-16
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld h,a	; hl = expected-size bits 31-16
-		call Reader_FinishReadBitInline
+		call FinishRead
 
 ; Verify size
 ; TODO flush file before verifying
-		ld de,(Writer_count + 2) ; de = actual size bits 31-16
+		ld de,(OutputCount + 2) ; de = actual size bits 31-16
 		or a
 		sbc hl,de
 		jr nz,SizeError
-		ld hl,(Writer_bufPos)
+		ld hl,(OutputBufPos)
 		ld a,h
-		sub OBUFFER >> 8
+		sub OutputBuffer >> 8
 		ld h,a		; hl = #bytes still in buffer
-		ld bc,(Writer_count + 0) ; written size 15-0
+		ld bc,(OutputCount + 0) ; written size 15-0
 		add hl,bc	; hl = actual size  (add cannot overflow)
 		pop de		; expected, bits 15-0
 		sbc hl,de
@@ -283,15 +283,12 @@ SizeError	ld hl,TextSizeError
 		jp nz,ExitWithError
 
 ; Verify CRC
-		ld hl,OBUFFER
-		ld bc,(Writer_bufPos)
+		ld hl,OutputBuffer
+		ld bc,(OutputBufPos)
 		ld a,b
 		sub h
 		ld b,a
-		exx
-		ld de,(Writer_crc32 + 0)
-		ld bc,(Writer_crc32 + 2)
-		call nz,Writer_CalculateCRC32
+		call nz,UpdateCRC32
 
 		pop hl	; expected crc bits 31-16
 		scf
@@ -306,7 +303,7 @@ CrcError:	ld hl,TextCrcError
 
 
 ; Skip zero-terminated string
-SkipZString:	call Reader_Read_DE_fast
+SkipZString:	call ReadByte
 		and a
 		jr nz,SkipZString
 		ret
@@ -325,15 +322,16 @@ InflateBlock:	and a
 		jp ExitWithError
 
 ; An uncompressed block
-Uncompressed:	ld de,(Reader_bufPos)
-		call Reader_Align	; re-align to byte boundary
-		call Reader_Read_DE_fast
+Uncompressed:	ld de,(InputBufPos)
+		xor a
+		ld (InputBits),a	; re-align to byte boundary
+		call ReadByte
 		ld c,a
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld b,a			; bc = block-length
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld l,a
-		call Reader_Read_DE_fast
+		call ReadByte
 		ld h,a			; hl = complement of block-length
 		scf
 		adc hl,bc
@@ -348,12 +346,12 @@ Uncompressed:	ld de,(Reader_bufPos)
 		inc b
 		ld c,b
 		ld b,a
-UncompLoop:	call Reader_Read_DE_fast
-		call Writer_Write_slow
+UncompLoop:	call ReadByte
+		call WriteByteSlow
 		djnz UncompLoop
 		dec c
 		jr nz,UncompLoop
-UncompEnd:	ld (Reader_bufPos),de
+UncompEnd:	ld (InputBufPos),de
 		ret
 
 
@@ -385,12 +383,12 @@ FixedComp:	ld bc,FixedLitCount
 DynamicComp:	call BuildDynAlpha
 DoInflate:	ld a,#D9		; opcode for EXX
 		ld (DistanceTree),a
-		ld iy,Writer_Write_AndNext
-		call Reader_PrepareReadBitInline
-		ld hl,(Writer_bufPos)
+		ld iy,Write_AndNext
+		call PrepareRead
+		ld hl,(OutputBufPos)
 		call LiteralTree
-		ld (Writer_bufPos),hl
-		jp Reader_FinishReadBitInline
+		ld (OutputBufPos),hl
+		jp FinishRead
 
 
 ; -- Create dynamic alphabet --
@@ -401,22 +399,22 @@ MAX_DIST_LEN:	equ 30	; maximum number of 'distance code lengths'
 
 BuildDynAlpha:
 ; Read hlit
-		call Reader_PrepareReadBitInline
-		call Reader_ReadBitsInline_5_DE
+		call PrepareRead
+		call Read5Bits
 		inc a
 		cp (MAX_LIT_LEN & 0FFH) + 1
 		call nc,ThrowException
 		ld (hlit),a
 
 ; Read hdist
-		call Reader_ReadBitsInline_5_DE
+		call Read5Bits
 		inc a
 		cp MAX_DIST_LEN + 1
 		call nc,ThrowException
 		ld (hdist),a
 
 ; Read hclen
-		call Reader_ReadBitsInline_4_DE
+		call Read4Bits
 		add a,4
 		cp MAX_HEADER_LEN + 1
 		call nc,ThrowException
@@ -437,7 +435,7 @@ BuildDynAlpha:
 DynLoop:	ld a,(hl)
 		inc hl
 		ld (DynStore + 2),a ; self modifying code!
-		call Reader_ReadBitsInline_3_DE ; changes B
+		call Read3Bits ; changes B
 DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 		dec ixl
 		jr nz,DynLoop
@@ -465,7 +463,7 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 		pop de
 		pop bc
 		call HeaderTree		; decode the header
-		call Reader_FinishReadBitInline
+		call FinishRead
 
 ; Construct literal length alphabet
 		ld bc,(hlit) ; bc = number of symbols
@@ -612,16 +610,16 @@ CreateLoop:	; invariant: hl -> free space in output buffer
 		;            ix -> remaining code bits (MSB aligned)
 		;            c  -> number of remaining bits
 		;            b  -> 0
-; Generate 'Reader_ReadBitInline_DE'
+; Generate 'ReadBitInlineA'
 		ld (hl),0CBH		; SRL C
 		inc hl
 		ld (hl),39H
 		inc hl
 		ld (hl),0CCH		; CALL Z,nn
 		inc hl
-		ld (hl),Reader_ReadBitInline_NextByte_DE & 0FFH
+		ld (hl),ReadBitA & 0FFH
 		inc hl
-		ld (hl),Reader_ReadBitInline_NextByte_DE >> 8
+		ld (hl),ReadBitA >> 8
 		inc hl
 
 ; Generate JP NC,0 / JP C,0
@@ -686,7 +684,7 @@ Follow:		; invariant: hl = current (existing) Huffman node
 		inc hl
 		inc hl
 		inc hl
-		inc hl			; skip Reader_ReadBitInline_DE
+		inc hl			; skip ReadBitInlineA
 		dec c
 		jr nz,FollowLoop
 
@@ -756,8 +754,8 @@ HeaderSymbols:	db WriteLen_0_len
 		dw ThrowInline
 
 ; For all of these routines, the calling convention is like this:
-; c = inline bit reader state
-; de = inline Reader_bufPos
+; c = bit reader state
+; de = InputBufPos
 ; hl = literal/length/distance code lengths position
 ; ix = loop counter for nested 8-bit loop
 
@@ -827,7 +825,7 @@ WriteLen_15:	ld (hl),15
 WriteLen_15_len: equ $-WriteLen_15
 
 ; Header code alphabet symbol 16
-HeaderCopy:	call Reader_ReadBitsInline_2_DE
+HeaderCopy:	call Read2Bits
 		add a,3
 		ld b,a
 		dec hl
@@ -837,7 +835,7 @@ HeaderCopy:	call Reader_ReadBitsInline_2_DE
 HeaderCopyLen:	equ $ - HeaderCopy
 
 ; Header code alphabet symbol 17
-HdrZFill3:	call Reader_ReadBitsInline_3_DE
+HdrZFill3:	call Read3Bits
 		add a,3
 		ld b,a
 		xor a
@@ -845,7 +843,7 @@ HdrZFill3:	call Reader_ReadBitsInline_3_DE
 HdrZFill3Len:	equ $-HdrZFill3
 
 ; Header code alphabet symbol 18
-HdrZFill11:	call Reader_ReadBitsInline_7_DE
+HdrZFill11:	call Read7Bits
 		add a,11
 		ld b,a
 		xor a
@@ -1457,14 +1455,14 @@ LLSymbols:	db WriteLitLen00	; 0
 		dw ThrowInline
 
 ; For all of these routines, the calling convention is like this:
-; c = inline bit reader state
-; de = inline Reader_bufPos
-; hl = Writer_bufPos
-; iy = Writer_Write_AndNext
+; c = bit reader state
+; de = InputBufPos
+; hl = OutputBufPos
+; iy = Write_AndNext
 
 ; Literal/length alphabet symbols 0-255
 WriteLit00:	xor a		; special case
-		jp iy		; Writer_Write_AndNext
+		jp iy		; Write_AndNext
 WriteLit01:	ld a,#01
 		jp iy
 WriteLit02:	ld a,#02
@@ -2026,102 +2024,102 @@ CopyLen7:	exx
 		jp DistanceTree
 CopyLen7Len:	equ $ - CopyLen7
 
-CopyLen8:	call Reader_ReadBitsInline_1_DE
+CopyLen8:	call Read1Bit
 		add a,11
 		jp CopySetLength
 CopyLen8Len:	equ $ - CopyLen8
 
-CopyLen9:	call Reader_ReadBitsInline_1_DE
+CopyLen9:	call Read1Bit
 		add a,13
 		jp CopySetLength
 CopyLen9Len:	equ $ - CopyLen9
 
-CopyLen10:	call Reader_ReadBitsInline_1_DE
+CopyLen10:	call Read1Bit
 		add a,15
 		jp CopySetLength
 CopyLen10Len:	equ $ - CopyLen10
 
-CopyLen11:	call Reader_ReadBitsInline_1_DE
+CopyLen11:	call Read1Bit
 		add a,17
 		jp CopySetLength
 CopyLen11Len:	equ $ - CopyLen11
 
-CopyLen12:	call Reader_ReadBitsInline_2_DE
+CopyLen12:	call Read2Bits
 		add a,19
 		jp CopySetLength
 CopyLen12Len:	equ $ - CopyLen12
 
-CopyLen13:	call Reader_ReadBitsInline_2_DE
+CopyLen13:	call Read2Bits
 		add a,23
 		jp CopySetLength
 CopyLen13Len:	equ $ - CopyLen13
 
-CopyLen14:	call Reader_ReadBitsInline_2_DE
+CopyLen14:	call Read2Bits
 		add a,27
 		jp CopySetLength
 CopyLen14Len:	equ $ - CopyLen14
 
-CopyLen15:	call Reader_ReadBitsInline_2_DE
+CopyLen15:	call Read2Bits
 		add a,31
 		jp CopySetLength
 CopyLen15Len:	equ $ - CopyLen15
 
-CopyLen16:	call Reader_ReadBitsInline_3_DE
+CopyLen16:	call Read3Bits
 		add a,35
 		jp CopySetLength
 CopyLen16Len:	equ $ - CopyLen16
 
-CopyLen17:	call Reader_ReadBitsInline_3_DE
+CopyLen17:	call Read3Bits
 		add a,43
 		jp CopySetLength
 CopyLen17Len:	equ $ - CopyLen17
 
-CopyLen18:	call Reader_ReadBitsInline_3_DE
+CopyLen18:	call Read3Bits
 		add a,51
 		jp CopySetLength
 CopyLen18Len:	equ $ - CopyLen18
 
-CopyLen19:	call Reader_ReadBitsInline_3_DE
+CopyLen19:	call Read3Bits
 		add a,59
 		jp CopySetLength
 CopyLen19Len:	equ $ - CopyLen19
 
-CopyLen20:	call Reader_ReadBitsInline_4_DE
+CopyLen20:	call Read4Bits
 		add a,67
 		jp CopySetLength
 CopyLen20Len:	equ $ - CopyLen20
 
-CopyLen21:	call Reader_ReadBitsInline_4_DE
+CopyLen21:	call Read4Bits
 		add a,83
 		jp CopySetLength
 CopyLen21Len:	equ $ - CopyLen21
 
-CopyLen22:	call Reader_ReadBitsInline_4_DE
+CopyLen22:	call Read4Bits
 		add a,99
 		jp CopySetLength
 CopyLen22Len:	equ $ - CopyLen22
 
-CopyLen23:	call Reader_ReadBitsInline_4_DE
+CopyLen23:	call Read4Bits
 		add a,115
 		jp CopySetLength
 CopyLen23Len:	equ $ - CopyLen23
 
-CopyLen24:	call Reader_ReadBitsInline_5_DE
+CopyLen24:	call Read5Bits
 		add a,131
 		jp CopySetLength
 CopyLen24Len:	equ $ - CopyLen24
 
-CopyLen25:	call Reader_ReadBitsInline_5_DE
+CopyLen25:	call Read5Bits
 		add a,163
 		jp CopySetLength
 CopyLen25Len:	equ $ - CopyLen25
 
-CopyLen26:	call Reader_ReadBitsInline_5_DE
+CopyLen26:	call Read5Bits
 		add a,195
 		jp CopySetLength
 CopyLen26Len:	equ $ - CopyLen26
 
-CopyLen27:	call Reader_ReadBitsInline_5_DE
+CopyLen27:	call Read5Bits
 		add a,227
 		exx
 		ld c,a
@@ -2211,195 +2209,195 @@ DistSymbols:	db CopyDist0Len
 
 ; For all of these routines, the calling convention is like this:
 ; bc = length of the to-be-copied block
-; 'c = inline bit reader state
-; 'de = inline Reader_bufPos
-; 'hl = Writer_bufPos
-; iy = Writer_Write_AndNext
+; 'c = bit reader state
+; 'de = InputBufPos
+; 'hl = OutputBufPos
+; iy = Write_AndNext
 
 ; Distance alphabet symbols 0-29
 CopyDist0:	push hl
 		exx
 		ld de,1 - 1
-		jp Writer_Copy_AndNext
+		jp Copy_AndNext
 CopyDist0Len:	equ $ - CopyDist0
 
 CopyDist1:	push hl
 		exx
 		ld de,2 - 1
-		jp Writer_Copy_AndNext
+		jp Copy_AndNext
 CopyDist1Len:	equ $ - CopyDist1
 
 CopyDist2:	push hl
 		exx
 		ld de,3 - 1
-		jp Writer_Copy_AndNext
+		jp Copy_AndNext
 CopyDist2Len:	equ $ - CopyDist2
 
 CopyDist3:	push hl
 		exx
 		ld de,4 - 1
-		jp Writer_Copy_AndNext
+		jp Copy_AndNext
 CopyDist3Len:	equ $ - CopyDist3
 
-CopyDist4:	call Reader_ReadBitsInline_1_DE
+CopyDist4:	call Read1Bit
 		add a,5 - 1
 		jp CopySmallDist
 CopyDist4Len:	equ $ - CopyDist4
 
-CopyDist5:	call Reader_ReadBitsInline_1_DE
+CopyDist5:	call Read1Bit
 		add a,7 - 1
 		jp CopySmallDist
 CopyDist5Len:	equ $ - CopyDist5
 
-CopyDist6:	call Reader_ReadBitsInline_2_DE
+CopyDist6:	call Read2Bits
 		add a,9 - 1
 		jp CopySmallDist
 CopyDist6Len:	equ $ - CopyDist6
 
-CopyDist7:	call Reader_ReadBitsInline_2_DE
+CopyDist7:	call Read2Bits
 		add a,13 - 1
 		jp CopySmallDist
 CopyDist7Len:	equ $ - CopyDist7
 
-CopyDist8:	call Reader_ReadBitsInline_3_DE
+CopyDist8:	call Read3Bits
 		add a,17 - 1
 		jp CopySmallDist
 CopyDist8Len:	equ $ - CopyDist8
 
-CopyDist9:	call Reader_ReadBitsInline_3_DE
+CopyDist9:	call Read3Bits
 		add a,25 - 1
 		jp CopySmallDist
 CopyDist9Len:	equ $ - CopyDist9
 
-CopyDist10:	call Reader_ReadBitsInline_4_DE
+CopyDist10:	call Read4Bits
 		add a,33 - 1
 		jp CopySmallDist
 CopyDist10Len:	equ $ - CopyDist10
 
-CopyDist11:	call Reader_ReadBitsInline_4_DE
+CopyDist11:	call Read4Bits
 		add a,49 - 1
 		jp CopySmallDist
 CopyDist11Len:	equ $ - CopyDist11
 
-CopyDist12:	call Reader_ReadBitsInline_5_DE
+CopyDist12:	call Read5Bits
 		add a,65 - 1
 		jp CopySmallDist
 CopyDist12Len:	equ $ - CopyDist12
 
-CopyDist13:	call Reader_ReadBitsInline_5_DE
+CopyDist13:	call Read5Bits
 		add a,97 - 1
 		jp CopySmallDist
 CopyDist13Len:	equ $ - CopyDist13
 
-CopyDist14:	call Reader_ReadBitsInline_6_DE
+CopyDist14:	call Read6Bits
 		add a,129 - 1
 		jp CopySmallDist
 CopyDist14Len:	equ $ - CopyDist14
 
-CopyDist15:	call Reader_ReadBitsInline_6_DE
+CopyDist15:	call Read6Bits
 		add a,193 - 1
 		jp CopySmallDist
 CopyDist15Len:	equ $ - CopyDist15
 
-CopyDist16:	call Reader_ReadBitsInline_7_DE
+CopyDist16:	call Read7Bits
 		push hl
 		exx
 		ld e,a
 		ld d,257 - 1 >> 8
-		jp Writer_Copy_AndNext
+		jp Copy_AndNext
 CopyDist16Len:	equ $ - CopyDist16
 
-CopyDist17:	call Reader_ReadBitsInline_7_DE
+CopyDist17:	call Read7Bits
 		push hl
 		exx
 		add a,385 - 1 & 0FFH
 		ld e,a
 		ld d,385 - 1 >> 8
-		jp Writer_Copy_AndNext
+		jp Copy_AndNext
 CopyDist17Len:	equ $ - CopyDist17
 
-CopyDist18:	call Reader_ReadBitsInline_8_DE
+CopyDist18:	call Read8Bits
 		push hl
 		exx
 		ld e,a
 		ld d,513 - 1 >> 8
-		jp Writer_Copy_AndNext
+		jp Copy_AndNext
 CopyDist18Len:	equ $ - CopyDist18
 
-CopyDist19:	call Reader_ReadBitsInline_8_DE
+CopyDist19:	call Read8Bits
 		push hl
 		exx
 		ld e,a
 		ld d,769 - 1 >> 8
-		jp Writer_Copy_AndNext
+		jp Copy_AndNext
 CopyDist19Len:	equ $ - CopyDist19
 
-CopyDist20:	call Reader_ReadBitsInline_8_DE
+CopyDist20:	call Read8Bits
 		ex af,af'
-		call Reader_ReadBitsInline_1_DE
+		call Read1Bit
 		add a,1025 - 1 >> 8
 		jp CopyBigDist
 CopyDist20Len:	equ $ - CopyDist20
 
-CopyDist21:	call Reader_ReadBitsInline_8_DE
+CopyDist21:	call Read8Bits
 		ex af,af'
-		call Reader_ReadBitsInline_1_DE
+		call Read1Bit
 		add a,1537 - 1 >> 8
 		jp CopyBigDist
 CopyDist21Len:	equ $ - CopyDist21
 
-CopyDist22:	call Reader_ReadBitsInline_8_DE
+CopyDist22:	call Read8Bits
 		ex af,af'
-		call Reader_ReadBitsInline_2_DE
+		call Read2Bits
 		add a,2049 - 1 >> 8
 		jp CopyBigDist
 CopyDist22Len:	equ $ - CopyDist22
 
-CopyDist23:	call Reader_ReadBitsInline_8_DE
+CopyDist23:	call Read8Bits
 		ex af,af'
-		call Reader_ReadBitsInline_2_DE
+		call Read2Bits
 		add a,3073 - 1 >> 8
 		jp CopyBigDist
 CopyDist23Len:	equ $ - CopyDist23
 
-CopyDist24:	call Reader_ReadBitsInline_8_DE
+CopyDist24:	call Read8Bits
 		ex af,af'
-		call Reader_ReadBitsInline_3_DE
+		call Read3Bits
 		add a,4097 - 1 >> 8
 		jp CopyBigDist
 CopyDist24Len:	equ $ - CopyDist24
 
-CopyDist25:	call Reader_ReadBitsInline_8_DE
+CopyDist25:	call Read8Bits
 		ex af,af'
-		call Reader_ReadBitsInline_3_DE
+		call Read3Bits
 		add a,6145 - 1 >> 8
 		jp CopyBigDist
 CopyDist25Len:	equ $ - CopyDist25
 
-CopyDist26:	call Reader_ReadBitsInline_8_DE
+CopyDist26:	call Read8Bits
 		ex af,af'
-		call Reader_ReadBitsInline_4_DE
+		call Read4Bits
 		add a,8193 - 1 >> 8
 		jp CopyBigDist
 CopyDist26Len:	equ $ - CopyDist26
 
-CopyDist27:	call Reader_ReadBitsInline_8_DE
+CopyDist27:	call Read8Bits
 		ex af,af'
-		call Reader_ReadBitsInline_4_DE
+		call Read4Bits
 		add a,12289 - 1 >> 8
 		jp CopyBigDist
 CopyDist27Len:	equ $ - CopyDist27
 
-CopyDist28:	call Reader_ReadBitsInline_8_DE
+CopyDist28:	call Read8Bits
 		ex af,af'
-		call Reader_ReadBitsInline_5_DE
+		call Read5Bits
 		add a,16385 - 1 >> 8
 		jp CopyBigDist
 CopyDist28Len:	equ $ - CopyDist28
 
-CopyDist29:	call Reader_ReadBitsInline_8_DE
+CopyDist29:	call Read8Bits
 		ex af,af'
-		call Reader_ReadBitsInline_5_DE
+		call Read5Bits
 		add a,24577 - 1 >> 8
 		jp CopyBigDist
 CopyDist29Len:	equ $ - CopyDist29
@@ -2409,7 +2407,7 @@ CopySmallDist:	push hl
 		exx
 		ld e,a
 		ld d,0
-		jp Writer_Copy_AndNext
+		jp Copy_AndNext
 
 ; a  = MSB(distance - 1)
 ; a' = LSB(distance - 1)
@@ -2418,7 +2416,484 @@ CopyBigDist:	push hl
 		ld d,a
 		ex af,af'
 		ld e,a
-		jp Writer_Copy_AndNext
+		jp Copy_AndNext
+
+
+; -- Routines to read bits and bytes from the GZ file --
+
+; (Re-)fill the input buffer with data from the .gz file
+FillInBuffer:	ld a,(InFileHandle)
+		ld b,a
+		ld de,InputBuffer
+		ld hl,InputBufSize
+		ld c,#48	; _READ
+		call #0005	; BDOS
+		cp #C7		; .EOF
+		jp nz,CheckDOSError
+		ld (InputEof),a	; any non-zero value
+		ret
+
+
+; For speed reasons all the ReadXX functions below require register C and DE
+; to contains certain values (and those functions also update C, DE). This
+; function sets up the correct values in C and DE.
+PrepareRead:	ld a,(InputBits)
+		ld c,a
+		ld de,(InputBufPos)
+		ret
+
+; After you're done calling the ReadXX functions and you want to use regsiters
+; C and DE for other stuff again. They should be written back to memory.
+FinishRead:	ld (InputBufPos),de
+		ld a,c
+		ld (InputBits),a
+		ret
+
+
+; Read a byte from the input
+; Requires: regsiter DE contains 'InputBufPos' (in/out)
+; a <- value
+; Unchanged: bc, hl, ix, iy
+ReadByte:	ld a,(de)
+		inc e
+		ret nz		; crosses 256-byte boundary?
+		push af
+		inc d
+		ld a,d
+		cp InputBufferEnd >> 8
+		jr z,NextBlock	; end of input buffer reached?
+		pop af
+		ret
+
+NextBlock:	push bc
+		push hl
+		ld a,(InputEof)
+		or a
+		jr nz,EofError
+		call FillInBuffer
+		pop hl
+		pop bc
+		ld a,(InputEof)
+		or a
+		ld de,InputBuffer
+		jr z,NoTrap
+		ld de,InputBufferEnd - 1 ; Trap on next read
+NoTrap		pop af
+		ret
+
+EofError:	ld hl,TextEofErr
+		call ThrowMessage
+
+
+; Requires: regsiter DE contains 'InputBufPos' (in/out)
+; hl = nr of bytes to skip
+SkipInputBytes:	call ReadByte
+		dec hl
+		ld a,h
+		or l
+		jr nz,SkipInputBytes
+		ret
+
+; Read a single bit from the input.
+; This code fragment is generated by 'GenerateHuffman'
+; Requires: PrepareRead has been called (registers C and DE are reserved)
+; output: carry-flag, reset -> read 0-bit, set-> read 1-bit
+; Modifies: a
+; Unchanged: b, hl, ix, iy
+ReadBitInlineA:	MACRO
+		srl c
+		call z,ReadBitA	; if sentinel bit is shifted out
+		ENDM
+
+; 'outline' part of ReadBitInlineA
+ReadBitA:	call ReadByte
+		scf  ; set sentinel bit
+		rra
+		ld c,a
+		ret
+
+; Similar to ReadBitInlineA, but changes regsiter B instead of A (is a tiny bit
+; slower because of that).
+ReadBitInlineB: MACRO
+		srl c
+		call z,ReadBitB  ; if sentinel bit is shifted out
+		ENDM
+
+; 'outline' part of ReadBitInlineB
+ReadBitB:	ld b,a
+		call ReadByte
+		scf  ; set sentinel bit
+		rra
+		ld c,a
+		ld a,b
+		ret
+
+; Routines to read {1..8} bits from the input.
+; Requires: PrepareRead has been called (registers C and DE are reserved)
+; a <- value
+; Modifies: b
+; Unchanged: hl, ix, iy
+Read1Bit:	xor a
+		ReadBitInlineB
+		rla
+		ret
+
+Read2Bits:	xor a
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rla
+		rla
+		ret
+
+Read3Bits:	xor a
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rla
+		rla
+		rla
+		ret
+
+Read4Bits:	xor a
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rla
+		rla
+		rla
+		rla
+		ret
+
+Read5Bits:	xor a
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		rra
+		rra
+		rra
+		ret
+
+Read6Bits:	xor a
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		rra
+		rra
+		ret
+
+Read7Bits:	xor a
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		rra
+		ret
+
+Read8Bits:	ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ReadBitInlineB
+		rra
+		ret
+
+
+; -- Routines to write to the output file --
+; --   they also maintain a sliding window to the last 32kB
+; --   and they calculate a CRC32 value of the data
+
+; Write a byte to the output.
+; This routine is very tightly coupled to the huffman decode routines. In fact
+; it's not really a function at all. Instead of returning it jumps to
+; 'LiteralTree'. And because of this, this function should not be called, but
+; jumped to.
+;
+; a = value
+; hl = OutputBufPos (in/out)
+; Modifies: a
+Write_AndNext:	ld (hl),a
+		inc l
+		jp nz,LiteralTree	; crosses 256-byte boundary?
+
+		inc h
+		ld a,h
+		cp OutputBufEnd >> 8
+		jp nz,LiteralTree	; end of buffer reached?
+
+		ld (OutputBufPos),hl	; OutputBufEnd
+		call FinishBlock
+		; hl = OutputBufPos = OutputBuffer
+		jp LiteralTree
+
+; Repeat (copy) a chunk of data that was written before.
+; Like 'Write_AndNext' above, this routine is very tightly coupled to the
+; huffman decode routines. It does not return, instead it jumps to LiteralTree.
+; (top-of-stack) = OutputBufPos (in/out)
+; bc = byte count (range 3-258)
+; de = distance - 1
+; Modifies: (after exx) af, bc', de', hl'
+Copy_AndNext:	pop hl   ; hl = OutputBufPos
+		push hl
+		scf
+		sbc hl,de
+		pop de
+		ld a,h
+		jr c,CopyWrap
+		cp OutputBuffer >> 8
+		jr c,CopyWrap
+WrapContinue:	ld a,(OutputBufEnd >> 8) - 3
+		cp h  ; does the source have a 512 byte margin without wrapping?
+		jr c,CopySlow
+		cp d  ; does the destination a 512 byte margin without wrapping?
+		jr c,CopySlow
+		ldi
+		ldi
+		ldir
+		push de
+		; and next
+		exx
+		pop hl	; updated OutputBufPos
+		jp LiteralTree
+
+CopyWrap:	add a,OutputBufSize >> 8
+		ld h,a
+		jp WrapContinue
+
+; bc = byte count
+; hl = buffer source
+; de = buffer destination
+; Modifies: af, bc, de, hl
+CopySlow:	ld (OutputBufPos),de
+		ld e,l
+		ld d,h
+		add hl,bc
+		jr c,CopySplit
+		ld a,h
+		cp OutputBufEnd >> 8
+		jp c,WrBlk_AndNext
+; hl = end address
+CopySplit:	push bc
+		ld bc,OutputBufEnd
+		and a
+		sbc hl,bc  ; hl = bytes past end
+		ex (sp),hl
+		pop bc
+		push bc
+		sbc hl,bc  ; hl = bytes until end
+		ld c,l
+		ld b,h
+		call WriteBlock
+		pop bc
+		ld hl,OutputBuffer
+		ld a,b
+		or c
+		jp nz,CopySlow
+		; and next
+		exx
+		ld hl,(OutputBufPos)
+		jp LiteralTree
+
+WrBlk_AndNext:	call WriteBlock
+		; and next
+		exx
+		ld hl,(OutputBufPos)
+		jp LiteralTree
+
+; bc = byte count
+; de = source
+; Modifies: af, bc, de, hl
+WriteBlock:	ld hl,(OutputBufPos)
+		add hl,bc
+		jr c,CopySplit2
+		ld a,h
+		cp OutputBufEnd >> 8
+		jr nc,CopySplit2
+		and a
+		sbc hl,bc
+		ex de,hl
+		ldir
+		ld (OutputBufPos),de
+		ret
+
+; hl = end address
+CopySplit2:	push bc
+		ld bc,OutputBufEnd
+		and a
+		sbc hl,bc  ; hl = bytes past end
+		ld c,l
+		ld b,h
+		ex (sp),hl
+		sbc hl,bc  ; hl = bytes until end
+		ld c,l
+		ld b,h
+		ex de,hl
+		ld de,(OutputBufPos)
+		ldir
+		ld (OutputBufPos),de
+		push hl
+		call FinishBlock
+		pop de
+		pop bc
+		ld a,b
+		or c
+		jp nz,WriteBlock
+		ret
+
+; a = value
+; de,bc <- unchanged
+; TODO remove this
+WriteByteSlow:	ld hl,(OutputBufPos)
+		ld (hl),a
+		inc l
+		ld a,l
+		ld (OutputBufPos),a
+		ret nz
+		inc h
+		ld a,h
+		ld (OutputBufPos + 1),a
+		cp OutputBufEnd >> 8
+		ret nz
+		;jp FinishBlock
+
+
+; 32kb block finished, update OutputCount, update Crc32Value and restart at
+; start of buffer
+FinishBlock:	push bc
+		push de
+
+		; Increase count
+		; (OutputCount + 0) does not change
+		ld hl,(OutputCount + 1)
+		ld bc,OutputBufSize >> 8
+		add hl,bc
+		ld (OutputCount + 1),hl
+		jr c,Inc16MB
+inc_16mb_end:
+		; Update CRC32
+		exx
+		push bc
+		push hl
+		ld hl,OutputBuffer
+		ld bc,OutputBufSize
+		call UpdateCRC32
+		ld (Crc32Value + 0),de
+		ld (Crc32Value + 2),bc
+		exx
+		pop hl
+		pop bc
+		exx
+
+		call FlushBuffer
+		pop de
+		pop bc
+		ld hl,OutputBuffer
+		ld (OutputBufPos),hl
+		ret
+
+Inc16MB:	ld hl,OutputCount + 3
+		inc (hl)
+		jr inc_16mb_end
+
+
+; Write (partial) output buffer to disk
+FlushBuffer:	ld c,#0B	; _CONST
+		call #0005	; BDOS    check for CTRL-C
+
+		ld a,(OutFileHandle)
+		ld b,a
+		inc a
+		ret z		; only testing?
+
+		ld de,OutputBuffer
+		ld hl,(OutputBufPos)
+		and a
+		sbc hl,de
+		ld c,#49	; _WRITE
+		call #0005	; BDOS
+		jp CheckDOSError
+
+
+; bc = byte count
+; hl = read address
+; bcde <- updated crc
+; Modifies: af, bc, de, hl, bc', hl'  does exx
+UpdateCRC32:	exx
+		ld de,(Crc32Value + 0)
+		ld bc,(Crc32Value + 2)
+		exx
+		ld a,c  ; convert 16-bit counter bc to two 8-bit counters in b and c
+		dec bc
+		inc b
+		ld c,b
+		ld b,a
+CRC32Loop:	ld a,(hl)
+		inc hl
+		exx
+		xor e
+		ld l,a
+		ld h,CRC32Table >> 8
+		ld a,(hl)
+		xor d
+		ld e,a
+		inc h
+		ld a,(hl)
+		xor c
+		ld d,a
+		inc h
+		ld a,(hl)
+		xor b
+		ld c,a
+		inc h
+		ld b,(hl)
+		exx
+		djnz CRC32Loop
+		dec c
+		jp nz,CRC32Loop
+		exx
+		ret
 
 
 ; === Utility functions ===
@@ -2531,9 +3006,20 @@ HuffRoot:	dw 0
 LengthsPtr:	dw 0
 HuffOutPtr:	dw 0
 
+; -- Used for reading the input file --
+InputEof:	db 0		; non-zero when end-of-file reached
+InFileHandle:	db #FF
+InputBufPos:	dw InputBuffer
+InputBits:	db 0		; partially consumed byte, 0 -> start new byte
+
+; -- Used for writing the output file
+OutputCount:	ds 4		; 32-bit value
+Crc32Value:	ds 4,#FF	; 32-bit value
+OutFileHandle:	db #FF		; start with invalid file handle
+OutputBufPos:	dw OutputBuffer
 
 
-; strings
+; -- strings --
 TextWelcome:	db "Gunzip 1.0 by Grauw", 13, 10, 10, 0
 TextInflating:	db "Inflating ", 0
 TextTesting:	db "Testing ",0
@@ -2558,17 +3044,12 @@ TextPathErr:	db "Can not specify additional file paths.", 13, 10, 0
 TextParameters:	db "PARAMETERS", 0
 TextBlockErr:	db "Invalid block type.", 13, 10, 0
 TextLengthErr:	db "Invalid length.", 13, 10, 0
+TextEofErr:	db "Premature end of data.", 13, 10, 0
 
-
-
-
-
-
-	INCLUDE "deflate/Reader.asm"
-	INCLUDE "deflate/Writer.asm"
 
 ; -- Used during dynamic alphabet building
 HeaderCodeOrder:db 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
+
 
 ; -- The fixed alphabet --
 ; Lengths of the literal symbols
@@ -2760,18 +3241,18 @@ VIRTUAL_ALIGN: MACRO ?boundary
 		ds VIRTUAL ?boundary - 1 - ($ + ?boundary - 1) % ?boundary
 		ENDM
 
-		VIRTUAL_ALIGN 100H
-IBUFFER_SIZE:	equ 1000H
-IBUFFER:	ds VIRTUAL IBUFFER_SIZE
-IBUFFER_END:	equ IBUFFER + IBUFFER_SIZE
+		VIRTUAL_ALIGN #100
+InputBufSize:	equ #1000
+InputBuffer:	ds VIRTUAL InputBufSize
+InputBufferEnd:	equ InputBuffer + InputBufSize
 
-		VIRTUAL_ALIGN 100H
-OBUFFER_SIZE:	equ 8000H
-OBUFFER:	ds VIRTUAL OBUFFER_SIZE
-OBUFFER_END:	equ OBUFFER + OBUFFER_SIZE
+		VIRTUAL_ALIGN #100
+OutputBufSize:	equ #8000	; _must_ be exactly 32kB
+OutputBuffer:	ds VIRTUAL OutputBufSize
+OutputBufEnd:	equ OutputBuffer + OutputBufSize
 
 ; scratch area: the same memory reused by various routines
-		VIRTUAL_ALIGN 100H
+		VIRTUAL_ALIGN #100
 ScratchBuf:	ds VIRTUAL 32
 
 MEMORY_END:	equ $
