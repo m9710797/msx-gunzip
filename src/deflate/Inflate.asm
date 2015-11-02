@@ -1,99 +1,3 @@
-;
-; Inflate implementation
-;
-Inflate_Inflate:
-	call Reader_PrepareReadBitInline
-	call Reader_ReadBitsInline_1_DE
-	push af
-	call Reader_ReadBitsInline_2_DE
-	push af
-	call Reader_FinishReadBitInline
-	pop af
-	call Inflate_InflateBlock
-	pop af
-	or a
-	jr z,Inflate_Inflate
-	ret
-
-; a = block type
-Inflate_InflateBlock:
-	and a
-	jr z,Inflate_InflateUncompressed
-	cp 2
-	jr c,Inflate_InflateFixedCompressed
-	jr z,Inflate_InflateDynamicCompressed
-	ld hl,Inflate_invalidBlockTypeError
-	jp ExitWithError
-
-Inflate_InflateUncompressed: PROC
-	ld de,(Reader_bufPos)
-	call Reader_Align
-	call Reader_Read_DE_fast
-	ld c,a
-	call Reader_Read_DE_fast
-	ld b,a
-	call Reader_Read_DE_fast
-	ld l,a
-	call Reader_Read_DE_fast
-	ld h,a
-	scf
-	adc hl,bc
-	ld hl,Inflate_invalidLengthError
-	jp nz,ExitWithError
-
-	ld a,b
-	or c
-	jr z,End
-	ld a,c
-	dec bc
-	inc b
-	ld c,b
-	ld b,a
-
-Loop:	call Reader_Read_DE_fast
-	call Writer_Write_slow
-	djnz Loop
-	dec c
-	jr nz,Loop
-
-End:	ld (Reader_bufPos),de
-	ret
-	ENDP
-
-Inflate_InflateFixedCompressed:
-	ld bc,FixedAlphabets_literalLengthCodeLengthsCount
-	ld de,FixedAlphabets_literalLengthCodeLengths
-	ld hl,LiteralTree
-	ld iy,Inflate_literalLengthSymbols
-	call generate_huffman
-	ld hl,LiteralTreeEnd
-	ld de,(out_ptr)
-	or a
-	sbc hl,de
-	call c,ThrowException
-
-	ld bc,FixedAlphabets_distanceCodeLengthsCount
-	ld de,FixedAlphabets_distanceCodeLengths
-	ld hl,DistanceTree
-	ld iy,Inflate_distanceSymbols
-	call generate_huffman
-	ld hl,DistanceTreeEnd
-	ld de,(out_ptr)
-	or a
-	sbc hl,de
-	call c,ThrowException
-	jr Inflate_DoInflate
-
-Inflate_InflateDynamicCompressed:
-	call ConstructDynamicAlphabets
-Inflate_DoInflate:
-	ld iy,Writer_Write_AndNext
-	call Reader_PrepareReadBitInline
-	ld hl,(Writer_bufPos)
-	call LiteralTree
-	ld (Writer_bufPos),hl
-	jp Reader_FinishReadBitInline
-
 ; Literal/length alphabet symbols 0-255
 ; c = inline bit reader state
 ; de = inline Reader_bufPos
@@ -614,12 +518,14 @@ WriteLitFF:	ld a,#FF
 WriteLitLen00:	equ WriteLit01 - WriteLit00	; special case for 00
 WriteLitLen:	equ WriteLit02 - WriteLit01	; all other cases
 
+
 ; Literal/length alphabet symbol 256
 ; c = inline bit reader state
 ; de = inline Reader_bufPos
 ; iy = Writer_Write_AndNext
 EndBlock:	ret
 EndBlockLen:	equ $ - EndBlock
+
 
 ; Literal/length alphabet symbols 257-285
 ; c = inline bit reader state
@@ -1694,12 +1600,6 @@ Inflate_distanceSymbols:
 	dw ThrowInline
 	db ThrowInlineLen
 	dw ThrowInline
-
-Inflate_invalidBlockTypeError:
-	db "Invalid block type.",13,10,0
-
-Inflate_invalidLengthError:
-	db "Invalid length.",13,10,0
 
 
 

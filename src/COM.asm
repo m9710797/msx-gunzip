@@ -227,8 +227,18 @@ NoSkipExtra:
 
 		call Reader_FinishReadBitInline
 	
-; Actually decompress
-		call Inflate_Inflate
+; Decompress all blocks in the gz file
+InflateLoop:	call Reader_PrepareReadBitInline
+		call Reader_ReadBitsInline_1_DE
+		push af
+		call Reader_ReadBitsInline_2_DE
+		push af
+		call Reader_FinishReadBitInline
+		pop af
+		call InflateBlock
+		pop af
+		or a
+		jr z,InflateLoop
 	
 ; Verify the decompressed data
 ; Read expected values from file
@@ -300,6 +310,84 @@ SkipZString:	call Reader_Read_DE_fast
 		and a
 		jr nz,SkipZString
 		ret
+
+
+; -- Inflate decompression --
+
+; a = block type
+InflateBlock:	and a
+		jr z,Uncompressed
+		cp 2
+		jr c,FixedComp
+		jr z,DynamicComp
+		ld hl,TextBlockErr
+		jp ExitWithError
+
+; An uncompressed block
+Uncompressed:	ld de,(Reader_bufPos)
+		call Reader_Align	; re-align to byte boundary
+		call Reader_Read_DE_fast
+		ld c,a
+		call Reader_Read_DE_fast
+		ld b,a			; bc = block-length
+		call Reader_Read_DE_fast
+		ld l,a
+		call Reader_Read_DE_fast
+		ld h,a			; hl = complement of block-length
+		scf
+		adc hl,bc
+		ld hl,TextLengthErr
+		jp nz,ExitWithError
+
+		ld a,b
+		or c
+		jr z,UncompEnd	; length = 0
+		ld a,c
+		dec bc
+		inc b
+		ld c,b
+		ld b,a
+UncompLoop:	call Reader_Read_DE_fast
+		call Writer_Write_slow
+		djnz UncompLoop
+		dec c
+		jr nz,UncompLoop
+UncompEnd:	ld (Reader_bufPos),de
+		ret
+
+
+; A block compressed using the fixed alphabet
+FixedComp:	ld bc,FixedAlphabets_literalLengthCodeLengthsCount
+		ld de,FixedAlphabets_literalLengthCodeLengths
+		ld hl,LiteralTree
+		ld iy,Inflate_literalLengthSymbols
+		call generate_huffman
+		ld hl,LiteralTreeEnd	;; Sanity check:
+		ld de,(out_ptr)		;;  is the 'LiteralTree' buffer
+		or a			;;  big enough to hold the
+		sbc hl,de		;;  generated code?
+		call c,ThrowException	;;
+
+		ld bc,FixedAlphabets_distanceCodeLengthsCount
+		ld de,FixedAlphabets_distanceCodeLengths
+		ld hl,DistanceTree
+		ld iy,Inflate_distanceSymbols
+		call generate_huffman
+		ld hl,DistanceTreeEnd	;; Sanity check
+		ld de,(out_ptr)		;;
+		or a			;;
+		sbc hl,de		;;
+		call c,ThrowException	;;
+		jr DoInflate
+
+; A block compressed using a dynamic alphabet
+DynamicComp:	call ConstructDynamicAlphabets
+DoInflate:	ld iy,Writer_Write_AndNext
+		call Reader_PrepareReadBitInline
+		ld hl,(Writer_bufPos)
+		call LiteralTree
+		ld (Writer_bufPos),hl
+		jp Reader_FinishReadBitInline
 
 
 ; -- Various utility functions --
@@ -425,6 +513,9 @@ TextException:	db "An exception occurred on address: ", 0
 TextOptionErr:	db "Unknown command line option.", 13, 10, 0
 TextPathErr:	db "Can not specify additional file paths.", 13, 10, 0
 TextParameters:	db "PARAMETERS", 0
+TextBlockErr:	db "Invalid block type.", 13, 10, 0
+TextLengthErr:	db "Invalid length.", 13, 10, 0
+
 
 
 
