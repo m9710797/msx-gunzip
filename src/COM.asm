@@ -1,5 +1,7 @@
 		org #0100
 
+; -- Main program --
+
 ; Check for DOS2
 		xor a
 		ld b,a
@@ -24,37 +26,37 @@ STACK_SIZE:	equ #0100	; make sure there's room for this much stack
 
 ; Parse CLI
 		call ParseCLI
-		ld hl,(cli_archivePath)
+		ld hl,(InputPath)
 		ld a,l
 		or h
 		ld hl,TextUsage
 		jp z,ExitWithError
 
 ; Print Welcome
-		ld a,(cli_quiet)
+		ld a,(Quiet)
 		or a
 		ld hl,TextWelcome
 		call z,Print
 
 ; Print inflating/testing
-		ld a,(cli_quiet)
+		ld a,(Quiet)
 		or a
 		jr nz,SkipPrint
-		ld hl,(cli_outputPath)
+		ld hl,(OutputPath)
 		ld a,l
 		or h
 		ld hl,TextTesting
 		jr z,DoPrint
 		ld hl,TextInflating
 DoPrint:	call Print
-		ld hl,(cli_archivePath)
+		ld hl,(InputPath)
 		call Print
 		ld hl,TextDotDotDot
 		call Print
 SkipPrint:
 
 ; Open input file
-		ld de,(cli_archivePath)
+		ld de,(InputPath)
 		ld a,%00000001  ; read only
 		ld c,#43	; _OPEN
 		call #0005	; BDOS
@@ -64,7 +66,7 @@ SkipPrint:
 		call Reader_FillBuffer	; fill buffer with initial content
 
 ; Open output file
-		ld de,(cli_outputPath)
+		ld de,(OutputPath)
 		ld a,d
 		or e
 		jr z,NoOutputFile
@@ -97,9 +99,64 @@ SkipCloseOutput:
 		jp CheckDOSError
 		; -- done -- 
 
-;
-; The actual gunzip code
-;
+
+; -- Command line parser --
+ParseCLI:	ld de,CliBuffer
+		ld hl,TextParameters
+		ld bc,255 * 256 + #6B	; _GENV
+		call #0005		; BDOS
+
+ParseLoop:	ld a,(de)
+		and a
+		ret z
+		cp "/"
+		jr z,ParseOption
+		cp " "
+		jr nz,ParsePath
+ParseNext:	inc de
+		jr ParseLoop
+
+ParseOption:	inc de
+		ld a,(de)
+		and %11011111  ; upper-case
+		cp "Q"
+		jr z,OptionQuiet
+OptionError:	ld hl,TextOptionErr
+		jp ExitWithError
+
+OptionQuiet:	ld (Quiet),a	; any non-zero value
+		inc de
+		ld a,(de)
+		and a
+		ret z
+		cp " "
+		jr z,ParseNext
+		jr OptionError
+
+ParsePath:	ld hl,(InputPath)
+		ld a,h
+		or l
+		jr nz,ParseOPath
+		ld (InputPath),de
+ParsePath2:	ld c,#5B	; _PARSE
+		call #0005	; BDOS
+		ld a,(de)
+		and a
+		ret z
+		xor a
+		ld (de),a	; make sure path is zero-terminated
+		jr ParseNext
+
+ParseOPath:	ld hl,(OutputPath)
+		ld a,h
+		or l
+		ld hl,TextPathErr
+		jp nz,ExitWithError
+		ld (OutputPath),de
+		jr ParsePath2
+
+
+; -- The actual gunzip code --
 
 GzipExtract:
 ; Read header
@@ -334,8 +391,14 @@ PrintException:	push de
 		jr PrintCrLf
 
 
-; variables
+; -- variables --
+; set by parsing the gzip header
 HeaderFlags:	db 0
+
+; filled in by parsing the command line
+InputPath:	dw 0	; zero-terminated string to input filename
+OutputPath:	dw 0	; zero terminated string to output filename (optional)
+Quiet:		db 0	; non-zero when running in 'quite' mode
 
 
 
@@ -359,11 +422,14 @@ TextUnknownFlag:db "Unknown flag.", 13, 10, 0
 TextSizeError:	db "Inflated size mismatch.", 13, 10, 0
 TextCrcError:	db "Inflated CRC32 mismatch.", 13, 10, 0
 TextException:	db "An exception occurred on address: ", 0
+TextOptionErr:	db "Unknown command line option.", 13, 10, 0
+TextPathErr:	db "Can not specify additional file paths.", 13, 10, 0
+TextParameters:	db "PARAMETERS", 0
 
 
 
 
-	INCLUDE "CLI.asm"
+
 	INCLUDE "deflate/Inflate.asm"
 	INCLUDE "deflate/FixedAlphabets.asm"
 	INCLUDE "deflate/DynamicAlphabets.asm"
@@ -513,7 +579,7 @@ LiteralTree:	ds VIRTUAL (8 +  5) * (288 - 1)
 LiteralTreeEnd:	equ $
 DistanceTree:	ds VIRTUAL (8 + 12) * ( 32 - 1)
 DistanceTreeEnd:equ $
-cli_buffer:	ds VIRTUAL 255	; TODO could be reused once files are opened
+CliBuffer:	ds VIRTUAL 255	; TODO could be reused once files are opened
 
 VIRTUAL_ALIGN: MACRO ?boundary
 		ds VIRTUAL ?boundary - 1 - ($ + ?boundary - 1) % ?boundary
