@@ -323,5 +323,5 @@ DynamicAlphabets_headerCodeSymbols:
 	dw DynamicAlphabets_FillZero_3
 	db DynamicAlphabets_FillZero_11_len
 	dw DynamicAlphabets_FillZero_11
-	db System_ThrowException_len
-	dw System_ThrowException_
+	db ThrowInlineLen
+	dw ThrowInline
