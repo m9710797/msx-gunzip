@@ -1,6 +1,6 @@
 all:
 	mkdir -p gen bin
-	java -jar tools/glass.jar -I gen src/COM.asm bin/gunzip.com bin/gunzip.sym
+	java -jar tools/glass.jar -I gen src/gunzip.asm bin/gunzip.com bin/gunzip.sym
 
 dist: all
 	cp README.md LICENSE bin/
