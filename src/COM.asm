@@ -430,7 +430,7 @@ BuildDynAlpha:
 
 ; Read header code lengths
 		ld ixl,a	; hclen
-		ld hl,DynamicAlphabets_headerCodeOrder
+		ld hl,HeaderCodeOrder
 		ld iy,HdrCodeLengths
 DynLoop:	ld a,(hl)
 		inc hl
@@ -447,7 +447,7 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 		ld de,HdrCodeLengths ; de = length of symbols
 		ld hl,HeaderTree
 		push hl
-		ld iy,DynamicAlphabets_headerCodeSymbols
+		ld iy,HeaderSymbols
 		call GenerateHuffman
 		ld hl,HeaderTreeEnd	;; Sanity check:
 		ld de,(HuffOutPtr)	;;  is the 'HeaderTree' buffer
@@ -464,7 +464,7 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 		ld hl,LLDCodeLengths
 		pop de
 		pop bc
-		call DynamicAlphabets_DecodeLiteralLengthDistanceCodeLengths
+		call DecodeHeader
 		call Reader_FinishReadBitInline
 
 ; Construct literal length alphabet
@@ -677,7 +677,7 @@ FollowExisting:	dec hl
 		ld l,(hl)		; low  address byte
 		ld h,a			; high address byte
 
-Follow:		; invariant: hl = current (existing) huffman node
+Follow:		; invariant: hl = current (existing) Huffman node
 		;	     de = free buffer space (HuffOutPtr)
 		;            ix -> remaining code bits (MSB aligned)
 		;            c  -> number of remaining bits
@@ -706,6 +706,178 @@ NextSymbol:	inc iy
 		ld a,b
 		or c
 		jp nz,SymbolLoop
+		ret
+
+
+; -- Symbol routines used by the 'header decoder' Huffman tree
+
+; Pairs of
+;  length  of the routine (1 bytes)
+;  pointer to the routine (2 bytes)
+HeaderSymbols:	db WriteLen_0_len
+		dw WriteLen_0
+		db WriteLen_1_len
+		dw WriteLen_1
+		db WriteLen_2_len
+		dw WriteLen_2
+		db WriteLen_3_len
+		dw WriteLen_3
+		db WriteLen_4_len
+		dw WriteLen_4
+		db WriteLen_5_len
+		dw WriteLen_5
+		db WriteLen_6_len
+		dw WriteLen_6
+		db WriteLen_7_len
+		dw WriteLen_7
+		db WriteLen_8_len
+		dw WriteLen_8
+		db WriteLen_9_len
+		dw WriteLen_9
+		db WriteLen_10_len
+		dw WriteLen_10
+		db WriteLen_11_len
+		dw WriteLen_11
+		db WriteLen_12_len
+		dw WriteLen_12
+		db WriteLen_13_len
+		dw WriteLen_13
+		db WriteLen_14_len
+		dw WriteLen_14
+		db WriteLen_15_len
+		dw WriteLen_15
+		db HeaderCopyLen
+		dw HeaderCopy
+		db HdrZFill3Len
+		dw HdrZFill3
+		db HdrZFill11Len
+		dw HdrZFill11
+		db ThrowInlineLen
+		dw ThrowInline
+
+; For all of these routines, the calling convention is like this:
+; c = inline bit reader state
+; de = inline Reader_bufPos
+; hl = literal/length/distance code lengths position
+; ix = loop counter for nested 8-bit loop
+; iy = header code alphabet root
+
+; Header code alphabet symbols 0-15
+WriteLen_0:	ld (hl),0
+		jp HeaderNext
+WriteLen_0_len: equ $-WriteLen_0
+
+WriteLen_1:	ld (hl),1
+		jp HeaderNext
+WriteLen_1_len: equ $-WriteLen_1
+
+WriteLen_2:	ld (hl),2
+		jp HeaderNext
+WriteLen_2_len: equ $-WriteLen_2
+
+WriteLen_3:	ld (hl),3
+		jp HeaderNext
+WriteLen_3_len: equ $-WriteLen_3
+
+WriteLen_4:	ld (hl),4
+		jp HeaderNext
+WriteLen_4_len: equ $-WriteLen_4
+
+WriteLen_5:	ld (hl),5
+		jp HeaderNext
+WriteLen_5_len: equ $-WriteLen_5
+
+WriteLen_6:	ld (hl),6
+		jp HeaderNext
+WriteLen_6_len: equ $-WriteLen_6
+
+WriteLen_7:	ld (hl),7
+		jp HeaderNext
+WriteLen_7_len: equ $-WriteLen_7
+
+WriteLen_8:	ld (hl),8
+		jp HeaderNext
+WriteLen_8_len: equ $-WriteLen_8
+
+WriteLen_9:	ld (hl),9
+		jp HeaderNext
+WriteLen_9_len: equ $-WriteLen_9
+
+WriteLen_10:	ld (hl),10
+		jp HeaderNext
+WriteLen_10_len: equ $-WriteLen_10
+
+WriteLen_11:	ld (hl),11
+		jp HeaderNext
+WriteLen_11_len: equ $-WriteLen_11
+
+WriteLen_12:	ld (hl),12
+		jp HeaderNext
+WriteLen_12_len: equ $-WriteLen_12
+
+WriteLen_13:	ld (hl),13
+		jp HeaderNext
+WriteLen_13_len: equ $-WriteLen_13
+
+WriteLen_14:	ld (hl),14
+		jp HeaderNext
+WriteLen_14_len: equ $-WriteLen_14
+
+WriteLen_15:	ld (hl),15
+		jp HeaderNext
+WriteLen_15_len: equ $-WriteLen_15
+
+; Header code alphabet symbol 16
+HeaderCopy:	call Reader_ReadBitsInline_2_DE
+		add a,3
+		ld b,a
+		dec hl
+		ld a,(hl)
+		inc hl
+		jp HeaderFill
+HeaderCopyLen:	equ $ - HeaderCopy
+
+; Header code alphabet symbol 17
+HdrZFill3:	call Reader_ReadBitsInline_3_DE
+		add a,3
+		ld b,a
+		xor a
+		jp HeaderFill
+HdrZFill3Len:	equ $-HdrZFill3
+
+; Header code alphabet symbol 18
+HdrZFill11:	call Reader_ReadBitsInline_7_DE
+		add a,11
+		ld b,a
+		xor a
+		jp HeaderFill
+HdrZFill11Len:	equ $ - HdrZFill11
+
+
+; c = inline bit reader state
+; de = inline Reader_bufPos
+; hl = literal/length/distance code lengths position
+; ix = loop counter for nested 8-bit loop
+; iy = header code alphabet root
+DecodeHeader:	jp iy	; TODO optimize this??
+
+HeaderNext:	inc hl
+		dec ixl
+		jp nz,DecodeHeader
+		dec ixh
+		jr nz,DecodeHeader
+		ret
+
+; a = fill value
+; b = repeat count
+FillLoop:	dec b
+		jr z,DecodeHeader
+HeaderFill:	ld (hl),a
+		inc hl
+		dec ixl
+		jp nz,FillLoop
+		dec ixh
+		jr nz,FillLoop
 		ret
 
 
@@ -853,9 +1025,11 @@ TextLengthErr:	db "Invalid length.", 13, 10, 0
 
 
 	INCLUDE "deflate/Inflate.asm"
-	INCLUDE "deflate/DynamicAlphabets.asm"
 	INCLUDE "deflate/Reader.asm"
 	INCLUDE "deflate/Writer.asm"
+
+; -- Used during dynamic alphabet building
+HeaderCodeOrder:db 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
 
 ; -- The fixed alphabet --
 ; Lengths of the literal symbols
