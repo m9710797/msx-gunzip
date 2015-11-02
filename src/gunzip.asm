@@ -18,8 +18,8 @@
 		jp c,ExitWithError
 
 ; Check if there's enough TPA memory available
-STACK_SIZE:	equ #0100	; make sure there's room for this much stack
-		ld hl,-(MEMORY_END + STACK_SIZE)
+StackSize:	equ #0100	; make sure there's room for this much stack
+		ld hl,-(MemoryEnd + StackSize)
 		add hl,sp
 		ld hl,TextNoMemory
 		jp nc,ExitWithError
@@ -509,10 +509,10 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 ;  (HuffOutPtr) = end   of output-buffer
 ; Modifies:
 ;  - all registers
-;  - variables ScratchBuf,HuffRoot,HuffOutPtr,LengthsPtr are changed, but can be
+;  - variables HuffScratch,HuffRoot,HuffOutPtr,LengthsPtr are changed, but can be
 ;    freely used outside this routine. IOW it's all scratch area.
 ; Requires:
-;  ScratchBuf must be 256-byte aligned, must be at least 32 bytes in size
+;  HuffScratch must be 256-byte aligned, must be at least 32 bytes in size
 
 GenerateHuffman:
 		ld (HuffRoot),hl
@@ -521,8 +521,8 @@ GenerateHuffman:
 		push bc
 
 ; Clear length-counts table
-		ld hl,ScratchBuf
-		ld de,ScratchBuf + 1
+		ld hl,HuffScratch
+		ld de,HuffScratch + 1
 		ld bc,(2 * 16) - 1
 		ld (hl),b		; b = 0
 		ldir
@@ -532,7 +532,7 @@ GenerateHuffman:
 
 ; Count occurrences of each symbol-length
 		ld de,(LengthsPtr)
-		ld h,ScratchBuf >> 8	; ScratchBuf used as 'int16_t countBuf[16]'
+		ld h,HuffScratch >> 8	; HuffScratch used as 'int16_t countBuf[16]'
 CountLoop:	ld a,(de)		; symbol length
 		inc de
 		add a,a
@@ -548,13 +548,13 @@ CountNext:	dec bc
 		jr nz,CountLoop
 
 ; Calculate next-codes
-; Before this loop 'ScratchBuf' contains 'uint16_t countBuf[16]'
-; After  this loop 'ScratchBuf' contains 'uint16_t nextCode[16]'
+; Before this loop 'HuffScratch' contains 'uint16_t countBuf[16]'
+; After  this loop 'HuffScratch' contains 'uint16_t nextCode[16]'
 ; IOW 'countBuf' is transformed in-place to 'nextCode'
 		ld a,16
 		ld d,b			; b = 0
 		ld e,b			; de = t = 0
-		ld l,b			; hl = ScratchBuf
+		ld l,b			; hl = HuffScratch
 NextCodeLoop:	ld c,(hl)
 		ld (hl),e
 		inc l
@@ -582,7 +582,7 @@ SymbolLoop:	push bc			; bc = number of remaining symbols
 		add a,a
 		jp z,NextSymbol
 		ld l,a
-		ld h,ScratchBuf >> 8	; hl = &nextCode[length]
+		ld h,HuffScratch >> 8	; hl = &nextCode[length]
 
 		ld e,(hl)
 		inc l
@@ -2813,7 +2813,7 @@ FinishBlock:	push bc
 		add hl,bc
 		ld (OutputCount + 1),hl
 		jr c,Inc16MB
-inc_16mb_end:
+Inc16MBend:
 		; Update CRC32
 		exx
 		push bc
@@ -2837,7 +2837,7 @@ inc_16mb_end:
 
 Inc16MB:	ld hl,OutputCount + 3
 		inc (hl)
-		jr inc_16mb_end
+		jr Inc16MBend
 
 
 ; Write (partial) output buffer to disk
@@ -2904,10 +2904,10 @@ CRC32Loop:	ld a,(hl)
 CheckDOSError:	and a
 		ret z		; 0 -> no error
 		ld b,a
-		ld de,ScratchBuf
+		ld de,CliBuffer
 		ld c,#66	; _EXPLAIN
 		call #0005	; BDOS
-		ld hl,ScratchBuf
+		ld hl,CliBuffer
 		call PrintLn
 		jr DosExit
 
@@ -3021,7 +3021,7 @@ OutFileHandle:	db #FF		; start with invalid file handle
 OutputBufPos:	dw OutputBuffer
 
 
-; -- strings --
+; === strings ===
 TextWelcome:	db "Gunzip 1.0 by Grauw", 13, 10, 10, 0
 TextInflating:	db "Inflating ", 0
 TextTesting:	db "Testing ",0
@@ -3049,6 +3049,8 @@ TextLengthErr:	db "Invalid length.", 13, 10, 0
 TextEofErr:	db "Premature end of data.", 13, 10, 0
 
 
+; === Constant tables ===
+
 ; -- Used during dynamic alphabet building
 HeaderCodeOrder:db 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
 
@@ -3075,7 +3077,7 @@ FixedDistLen:	db 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
 FixedDistCount: equ $ - FixedDistLen
 
 
-; -- CRC32 lookup table, must be 256-byte aligned
+; -- CRC32 lookup table, must be 256-byte aligned --
 		ds (256 - ($ & 255) & 255)
 CRC32Table:	; uint32_t[256]
 		; bits 0-7
@@ -3215,46 +3217,66 @@ CRC32Table:	; uint32_t[256]
 		db #b3, #c4, #5d, #2a, #b4, #c3, #5a, #2d
 
 
+; === Buffers ===
 
-; Overlap 'HdrCodeLengths' and 'LLDCodeLengths', they are
-; not simultaneously life.
-;   TODO Does 'glass' have a union feature?
-; These are scratch buffers, they can be reused outside ConstructDynamicAlphabets
+EOP:		equ $	; end-of-program, buffers can start here
 
-; Header code lengths
-HdrCodeLengths:	; ds MAX_HEADER_LEN
-; Literal/length + Distance code lengths
-LLDCodeLengths:	ds VIRTUAL MAX_LIT_LEN + MAX_DIST_LEN
-
-; Generated header-decode tree
-HeaderTree:	ds VIRTUAL (8+5) * (MAX_HEADER_LEN - 1)
-HeaderTreeEnd:	equ $
+; -- ParseCLI --
+; buffer that holds command line and in/out filenames,
+; can be reused once files are opened
+CliBuffer:	equ EOP		; ds 255
 
 
+; -- BuildDynAlpha --
+; union {
+;     HdrCodeLengths      ds MAX_HEADER_LEN
+;     struct {
+;         LLDCodeLengths  ds MAX_LIT_LEN + MAX_DIST_LEN
+;         HeaderTree      ds (8 + 5) * (MAX_HEADER_LEN - 1)
+;     }
+; }
+; These 3 buffers are only needed during BuildDynAlpha, though LLDCodeLengths
+; cannot overlap with LiteralTree and DistanceTree
+
+HdrCodeLSize:	equ MAX_HEADER_LEN
+LLDCodeLSize:	equ MAX_LIT_LEN + MAX_DIST_LEN
+HeaderTreeSize:	equ (8 + 5) * (MAX_HEADER_LEN - 1)
+
+HdrCodeLengths:	equ EOP					; ds HdrCodeLSize
+LLDCodeLengths:	equ EOP					; ds LLDCodeLSize
+HeaderTree:	equ LLDCodeLengths + LLDCodeLSize	; ds HeaderTreeSize
+
+HeaderTreeEnd:	equ HeaderTree + HeaderTreeSize
 
 
-LiteralTree:	ds VIRTUAL (8 +  5) * (288 - 1)
-LiteralTreeEnd:	equ $
-DistanceTree:	ds VIRTUAL (8 + 12) * ( 32 - 1) + 1
-DistanceTreeEnd:equ $
-CliBuffer:	ds VIRTUAL 255	; TODO could be reused once files are opened
+; -- Generated literal/distance huffman trees
+; These cannot overlap LLDCodeLengths, but overlapping HeaderTree is fine
+LiteralTreeSize:equ (8 +  5) * (288 - 1)
+LiteralTree:	equ HeaderTree
+LiteralTreeEnd:	equ LiteralTree + LiteralTreeSize
 
-VIRTUAL_ALIGN: MACRO ?boundary
-		ds VIRTUAL ?boundary - 1 - ($ + ?boundary - 1) % ?boundary
-		ENDM
+DistTreeSize:	equ (8 + 12) * (32 - 1) + 1
+DistanceTree:	equ LiteralTreeEnd
+DistanceTreeEnd:equ DistanceTree + DistTreeSize
 
-		VIRTUAL_ALIGN #100
-InputBufSize:	equ #1000
-InputBuffer:	ds VIRTUAL InputBufSize
-InputBufferEnd:	equ InputBuffer + InputBufSize
+; -- Input and output file buffers
+; These must be aligned at 256-byte boundary. OutputBuffer must be exactly
+; 32kB. InputBuffer must be (any) multiple of 256 bytes, but bigger improves
+; read performance.
+Padding		equ (256 - (DistanceTreeEnd & 255)) & 255
 
-		VIRTUAL_ALIGN #100
 OutputBufSize:	equ #8000	; _must_ be exactly 32kB
-OutputBuffer:	ds VIRTUAL OutputBufSize
+OutputBuffer:	equ DistanceTreeEnd + Padding
 OutputBufEnd:	equ OutputBuffer + OutputBufSize
 
-; scratch area: the same memory reused by various routines
-		VIRTUAL_ALIGN #100
-ScratchBuf:	ds VIRTUAL 32
+InputBufSize:	equ #1000
+InputBuffer:	equ OutputBufEnd
+InputBufferEnd:	equ InputBuffer + InputBufSize
 
-MEMORY_END:	equ $
+; -- Huffman scratch area --
+; Used while generating Huffman decoder.  TODO maybe overlap with 'Padding'?
+HuffScratchSize:equ 32
+HuffScratch:	equ InputBufferEnd
+HuffScratchEnd:	equ HuffScratch + HuffScratchSize
+
+MemoryEnd:	equ HuffScratchEnd
