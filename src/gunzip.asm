@@ -19,7 +19,7 @@
 
 ; Check if there's enough TPA memory available
 StackSize:	equ #0100	; make sure there's room for this much stack
-		ld hl,-(MemoryEnd + StackSize)
+		ld hl,-MemoryEnd - StackSize
 		add hl,sp
 		ld hl,TextNoMemory
 		jp nc,ExitWithError
@@ -260,7 +260,7 @@ InflateLoop:	call PrepareRead
 		ld l,a	; bits 23-16
 		call ReadByte
 		ld h,a	; bits 31-24
-		push hl; expected crc bits 31-16
+		push hl	; expected crc bits 31-16
 
 		call ReadByte
 		ld l,a	; bits 7-0
@@ -414,7 +414,7 @@ BuildDynAlpha:
 		call PrepareRead
 		call Read5Bits
 		inc a
-		cp (MAX_LIT_LEN & 0FFH) + 1
+		cp ((MAX_LIT_LEN) & #FF) + 1
 		call nc,ThrowException
 		ld (hlit),a
 
@@ -542,7 +542,7 @@ GenerateHuffman:
 
 ; Count occurrences of each symbol-length
 		ld de,(LengthsPtr)
-		ld h,HuffScratch >> 8	; HuffScratch used as 'int16_t countBuf[16]'
+		ld h,HuffScratch / 256	; HuffScratch used as 'int16_t countBuf[16]'
 CountLoop:	ld a,(de)		; symbol length
 		inc de
 		add a,a
@@ -592,7 +592,7 @@ SymbolLoop:	push bc			; bc = number of remaining symbols
 		add a,a
 		jp z,NextSymbol
 		ld l,a
-		ld h,HuffScratch >> 8	; hl = &nextCode[length]
+		ld h,HuffScratch / 256	; hl = &nextCode[length]
 
 		ld e,(hl)
 		inc l
@@ -629,9 +629,9 @@ CreateLoop:	; invariant: hl -> free space in output buffer
 		inc hl
 		ld (hl),0CCH		; CALL Z,nn
 		inc hl
-		ld (hl),ReadBitA & 0FFH
+		ld (hl),(ReadBitA) & #FF
 		inc hl
-		ld (hl),ReadBitA >> 8
+		ld (hl),ReadBitA / 256
 		inc hl
 
 ; Generate JP NC,0 / JP C,0
@@ -1474,517 +1474,517 @@ LLSymbols:	db WriteLitLen00	; 0
 
 ; Literal/length alphabet symbols 0-255
 WriteLit00:	xor a		; special case
-		jp iy		; Write_AndNext
+		jp (iy)		; Write_AndNext
 WriteLit01:	ld a,#01
-		jp iy
+		jp (iy)
 WriteLit02:	ld a,#02
-		jp iy
+		jp (iy)
 WriteLit03:	ld a,#03
-		jp iy
+		jp (iy)
 WriteLit04:	ld a,#04
-		jp iy
+		jp (iy)
 WriteLit05:	ld a,#05
-		jp iy
+		jp (iy)
 WriteLit06:	ld a,#06
-		jp iy
+		jp (iy)
 WriteLit07:	ld a,#07
-		jp iy
+		jp (iy)
 WriteLit08:	ld a,#08
-		jp iy
+		jp (iy)
 WriteLit09:	ld a,#09
-		jp iy
+		jp (iy)
 WriteLit0A:	ld a,#0A
-		jp iy
+		jp (iy)
 WriteLit0B:	ld a,#0B
-		jp iy
+		jp (iy)
 WriteLit0C:	ld a,#0C
-		jp iy
+		jp (iy)
 WriteLit0D:	ld a,#0D
-		jp iy
+		jp (iy)
 WriteLit0E:	ld a,#0E
-		jp iy
+		jp (iy)
 WriteLit0F:	ld a,#0F
-		jp iy
+		jp (iy)
 WriteLit10:	ld a,#10
-		jp iy
+		jp (iy)
 WriteLit11:	ld a,#11
-		jp iy
+		jp (iy)
 WriteLit12:	ld a,#12
-		jp iy
+		jp (iy)
 WriteLit13:	ld a,#13
-		jp iy
+		jp (iy)
 WriteLit14:	ld a,#14
-		jp iy
+		jp (iy)
 WriteLit15:	ld a,#15
-		jp iy
+		jp (iy)
 WriteLit16:	ld a,#16
-		jp iy
+		jp (iy)
 WriteLit17:	ld a,#17
-		jp iy
+		jp (iy)
 WriteLit18:	ld a,#18
-		jp iy
+		jp (iy)
 WriteLit19:	ld a,#19
-		jp iy
+		jp (iy)
 WriteLit1A:	ld a,#1A
-		jp iy
+		jp (iy)
 WriteLit1B:	ld a,#1B
-		jp iy
+		jp (iy)
 WriteLit1C:	ld a,#1C
-		jp iy
+		jp (iy)
 WriteLit1D:	ld a,#1D
-		jp iy
+		jp (iy)
 WriteLit1E:	ld a,#1E
-		jp iy
+		jp (iy)
 WriteLit1F:	ld a,#1F
-		jp iy
+		jp (iy)
 WriteLit20:	ld a,#20
-		jp iy
+		jp (iy)
 WriteLit21:	ld a,#21
-		jp iy
+		jp (iy)
 WriteLit22:	ld a,#22
-		jp iy
+		jp (iy)
 WriteLit23:	ld a,#23
-		jp iy
+		jp (iy)
 WriteLit24:	ld a,#24
-		jp iy
+		jp (iy)
 WriteLit25:	ld a,#25
-		jp iy
+		jp (iy)
 WriteLit26:	ld a,#26
-		jp iy
+		jp (iy)
 WriteLit27:	ld a,#27
-		jp iy
+		jp (iy)
 WriteLit28:	ld a,#28
-		jp iy
+		jp (iy)
 WriteLit29:	ld a,#29
-		jp iy
+		jp (iy)
 WriteLit2A:	ld a,#2A
-		jp iy
+		jp (iy)
 WriteLit2B:	ld a,#2B
-		jp iy
+		jp (iy)
 WriteLit2C:	ld a,#2C
-		jp iy
+		jp (iy)
 WriteLit2D:	ld a,#2D
-		jp iy
+		jp (iy)
 WriteLit2E:	ld a,#2E
-		jp iy
+		jp (iy)
 WriteLit2F:	ld a,#2F
-		jp iy
+		jp (iy)
 WriteLit30:	ld a,#30
-		jp iy
+		jp (iy)
 WriteLit31:	ld a,#31
-		jp iy
+		jp (iy)
 WriteLit32:	ld a,#32
-		jp iy
+		jp (iy)
 WriteLit33:	ld a,#33
-		jp iy
+		jp (iy)
 WriteLit34:	ld a,#34
-		jp iy
+		jp (iy)
 WriteLit35:	ld a,#35
-		jp iy
+		jp (iy)
 WriteLit36:	ld a,#36
-		jp iy
+		jp (iy)
 WriteLit37:	ld a,#37
-		jp iy
+		jp (iy)
 WriteLit38:	ld a,#38
-		jp iy
+		jp (iy)
 WriteLit39:	ld a,#39
-		jp iy
+		jp (iy)
 WriteLit3A:	ld a,#3A
-		jp iy
+		jp (iy)
 WriteLit3B:	ld a,#3B
-		jp iy
+		jp (iy)
 WriteLit3C:	ld a,#3C
-		jp iy
+		jp (iy)
 WriteLit3D:	ld a,#3D
-		jp iy
+		jp (iy)
 WriteLit3E:	ld a,#3E
-		jp iy
+		jp (iy)
 WriteLit3F:	ld a,#3F
-		jp iy
+		jp (iy)
 WriteLit40:	ld a,#40
-		jp iy
+		jp (iy)
 WriteLit41:	ld a,#41
-		jp iy
+		jp (iy)
 WriteLit42:	ld a,#42
-		jp iy
+		jp (iy)
 WriteLit43:	ld a,#43
-		jp iy
+		jp (iy)
 WriteLit44:	ld a,#44
-		jp iy
+		jp (iy)
 WriteLit45:	ld a,#45
-		jp iy
+		jp (iy)
 WriteLit46:	ld a,#46
-		jp iy
+		jp (iy)
 WriteLit47:	ld a,#47
-		jp iy
+		jp (iy)
 WriteLit48:	ld a,#48
-		jp iy
+		jp (iy)
 WriteLit49:	ld a,#49
-		jp iy
+		jp (iy)
 WriteLit4A:	ld a,#4A
-		jp iy
+		jp (iy)
 WriteLit4B:	ld a,#4B
-		jp iy
+		jp (iy)
 WriteLit4C:	ld a,#4C
-		jp iy
+		jp (iy)
 WriteLit4D:	ld a,#4D
-		jp iy
+		jp (iy)
 WriteLit4E:	ld a,#4E
-		jp iy
+		jp (iy)
 WriteLit4F:	ld a,#4F
-		jp iy
+		jp (iy)
 WriteLit50:	ld a,#50
-		jp iy
+		jp (iy)
 WriteLit51:	ld a,#51
-		jp iy
+		jp (iy)
 WriteLit52:	ld a,#52
-		jp iy
+		jp (iy)
 WriteLit53:	ld a,#53
-		jp iy
+		jp (iy)
 WriteLit54:	ld a,#54
-		jp iy
+		jp (iy)
 WriteLit55:	ld a,#55
-		jp iy
+		jp (iy)
 WriteLit56:	ld a,#56
-		jp iy
+		jp (iy)
 WriteLit57:	ld a,#57
-		jp iy
+		jp (iy)
 WriteLit58:	ld a,#58
-		jp iy
+		jp (iy)
 WriteLit59:	ld a,#59
-		jp iy
+		jp (iy)
 WriteLit5A:	ld a,#5A
-		jp iy
+		jp (iy)
 WriteLit5B:	ld a,#5B
-		jp iy
+		jp (iy)
 WriteLit5C:	ld a,#5C
-		jp iy
+		jp (iy)
 WriteLit5D:	ld a,#5D
-		jp iy
+		jp (iy)
 WriteLit5E:	ld a,#5E
-		jp iy
+		jp (iy)
 WriteLit5F:	ld a,#5F
-		jp iy
+		jp (iy)
 WriteLit60:	ld a,#60
-		jp iy
+		jp (iy)
 WriteLit61:	ld a,#61
-		jp iy
+		jp (iy)
 WriteLit62:	ld a,#62
-		jp iy
+		jp (iy)
 WriteLit63:	ld a,#63
-		jp iy
+		jp (iy)
 WriteLit64:	ld a,#64
-		jp iy
+		jp (iy)
 WriteLit65:	ld a,#65
-		jp iy
+		jp (iy)
 WriteLit66:	ld a,#66
-		jp iy
+		jp (iy)
 WriteLit67:	ld a,#67
-		jp iy
+		jp (iy)
 WriteLit68:	ld a,#68
-		jp iy
+		jp (iy)
 WriteLit69:	ld a,#69
-		jp iy
+		jp (iy)
 WriteLit6A:	ld a,#6A
-		jp iy
+		jp (iy)
 WriteLit6B:	ld a,#6B
-		jp iy
+		jp (iy)
 WriteLit6C:	ld a,#6C
-		jp iy
+		jp (iy)
 WriteLit6D:	ld a,#6D
-		jp iy
+		jp (iy)
 WriteLit6E:	ld a,#6E
-		jp iy
+		jp (iy)
 WriteLit6F:	ld a,#6F
-		jp iy
+		jp (iy)
 WriteLit70:	ld a,#70
-		jp iy
+		jp (iy)
 WriteLit71:	ld a,#71
-		jp iy
+		jp (iy)
 WriteLit72:	ld a,#72
-		jp iy
+		jp (iy)
 WriteLit73:	ld a,#73
-		jp iy
+		jp (iy)
 WriteLit74:	ld a,#74
-		jp iy
+		jp (iy)
 WriteLit75:	ld a,#75
-		jp iy
+		jp (iy)
 WriteLit76:	ld a,#76
-		jp iy
+		jp (iy)
 WriteLit77:	ld a,#77
-		jp iy
+		jp (iy)
 WriteLit78:	ld a,#78
-		jp iy
+		jp (iy)
 WriteLit79:	ld a,#79
-		jp iy
+		jp (iy)
 WriteLit7A:	ld a,#7A
-		jp iy
+		jp (iy)
 WriteLit7B:	ld a,#7B
-		jp iy
+		jp (iy)
 WriteLit7C:	ld a,#7C
-		jp iy
+		jp (iy)
 WriteLit7D:	ld a,#7D
-		jp iy
+		jp (iy)
 WriteLit7E:	ld a,#7E
-		jp iy
+		jp (iy)
 WriteLit7F:	ld a,#7F
-		jp iy
+		jp (iy)
 WriteLit80:	ld a,#80
-		jp iy
+		jp (iy)
 WriteLit81:	ld a,#81
-		jp iy
+		jp (iy)
 WriteLit82:	ld a,#82
-		jp iy
+		jp (iy)
 WriteLit83:	ld a,#83
-		jp iy
+		jp (iy)
 WriteLit84:	ld a,#84
-		jp iy
+		jp (iy)
 WriteLit85:	ld a,#85
-		jp iy
+		jp (iy)
 WriteLit86:	ld a,#86
-		jp iy
+		jp (iy)
 WriteLit87:	ld a,#87
-		jp iy
+		jp (iy)
 WriteLit88:	ld a,#88
-		jp iy
+		jp (iy)
 WriteLit89:	ld a,#89
-		jp iy
+		jp (iy)
 WriteLit8A:	ld a,#8A
-		jp iy
+		jp (iy)
 WriteLit8B:	ld a,#8B
-		jp iy
+		jp (iy)
 WriteLit8C:	ld a,#8C
-		jp iy
+		jp (iy)
 WriteLit8D:	ld a,#8D
-		jp iy
+		jp (iy)
 WriteLit8E:	ld a,#8E
-		jp iy
+		jp (iy)
 WriteLit8F:	ld a,#8F
-		jp iy
+		jp (iy)
 WriteLit90:	ld a,#90
-		jp iy
+		jp (iy)
 WriteLit91:	ld a,#91
-		jp iy
+		jp (iy)
 WriteLit92:	ld a,#92
-		jp iy
+		jp (iy)
 WriteLit93:	ld a,#93
-		jp iy
+		jp (iy)
 WriteLit94:	ld a,#94
-		jp iy
+		jp (iy)
 WriteLit95:	ld a,#95
-		jp iy
+		jp (iy)
 WriteLit96:	ld a,#96
-		jp iy
+		jp (iy)
 WriteLit97:	ld a,#97
-		jp iy
+		jp (iy)
 WriteLit98:	ld a,#98
-		jp iy
+		jp (iy)
 WriteLit99:	ld a,#99
-		jp iy
+		jp (iy)
 WriteLit9A:	ld a,#9A
-		jp iy
+		jp (iy)
 WriteLit9B:	ld a,#9B
-		jp iy
+		jp (iy)
 WriteLit9C:	ld a,#9C
-		jp iy
+		jp (iy)
 WriteLit9D:	ld a,#9D
-		jp iy
+		jp (iy)
 WriteLit9E:	ld a,#9E
-		jp iy
+		jp (iy)
 WriteLit9F:	ld a,#9F
-		jp iy
+		jp (iy)
 WriteLitA0:	ld a,#A0
-		jp iy
+		jp (iy)
 WriteLitA1:	ld a,#A1
-		jp iy
+		jp (iy)
 WriteLitA2:	ld a,#A2
-		jp iy
+		jp (iy)
 WriteLitA3:	ld a,#A3
-		jp iy
+		jp (iy)
 WriteLitA4:	ld a,#A4
-		jp iy
+		jp (iy)
 WriteLitA5:	ld a,#A5
-		jp iy
+		jp (iy)
 WriteLitA6:	ld a,#A6
-		jp iy
+		jp (iy)
 WriteLitA7:	ld a,#A7
-		jp iy
+		jp (iy)
 WriteLitA8:	ld a,#A8
-		jp iy
+		jp (iy)
 WriteLitA9:	ld a,#A9
-		jp iy
+		jp (iy)
 WriteLitAA:	ld a,#AA
-		jp iy
+		jp (iy)
 WriteLitAB:	ld a,#AB
-		jp iy
+		jp (iy)
 WriteLitAC:	ld a,#AC
-		jp iy
+		jp (iy)
 WriteLitAD:	ld a,#AD
-		jp iy
+		jp (iy)
 WriteLitAE:	ld a,#AE
-		jp iy
+		jp (iy)
 WriteLitAF:	ld a,#AF
-		jp iy
+		jp (iy)
 WriteLitB0:	ld a,#B0
-		jp iy
+		jp (iy)
 WriteLitB1:	ld a,#B1
-		jp iy
+		jp (iy)
 WriteLitB2:	ld a,#B2
-		jp iy
+		jp (iy)
 WriteLitB3:	ld a,#B3
-		jp iy
+		jp (iy)
 WriteLitB4:	ld a,#B4
-		jp iy
+		jp (iy)
 WriteLitB5:	ld a,#B5
-		jp iy
+		jp (iy)
 WriteLitB6:	ld a,#B6
-		jp iy
+		jp (iy)
 WriteLitB7:	ld a,#B7
-		jp iy
+		jp (iy)
 WriteLitB8:	ld a,#B8
-		jp iy
+		jp (iy)
 WriteLitB9:	ld a,#B9
-		jp iy
+		jp (iy)
 WriteLitBA:	ld a,#BA
-		jp iy
+		jp (iy)
 WriteLitBB:	ld a,#BB
-		jp iy
+		jp (iy)
 WriteLitBC:	ld a,#BC
-		jp iy
+		jp (iy)
 WriteLitBD:	ld a,#BD
-		jp iy
+		jp (iy)
 WriteLitBE:	ld a,#BE
-		jp iy
+		jp (iy)
 WriteLitBF:	ld a,#BF
-		jp iy
+		jp (iy)
 WriteLitC0:	ld a,#C0
-		jp iy
+		jp (iy)
 WriteLitC1:	ld a,#C1
-		jp iy
+		jp (iy)
 WriteLitC2:	ld a,#C2
-		jp iy
+		jp (iy)
 WriteLitC3:	ld a,#C3
-		jp iy
+		jp (iy)
 WriteLitC4:	ld a,#C4
-		jp iy
+		jp (iy)
 WriteLitC5:	ld a,#C5
-		jp iy
+		jp (iy)
 WriteLitC6:	ld a,#C6
-		jp iy
+		jp (iy)
 WriteLitC7:	ld a,#C7
-		jp iy
+		jp (iy)
 WriteLitC8:	ld a,#C8
-		jp iy
+		jp (iy)
 WriteLitC9:	ld a,#C9
-		jp iy
+		jp (iy)
 WriteLitCA:	ld a,#CA
-		jp iy
+		jp (iy)
 WriteLitCB:	ld a,#CB
-		jp iy
+		jp (iy)
 WriteLitCC:	ld a,#CC
-		jp iy
+		jp (iy)
 WriteLitCD:	ld a,#CD
-		jp iy
+		jp (iy)
 WriteLitCE:	ld a,#CE
-		jp iy
+		jp (iy)
 WriteLitCF:	ld a,#CF
-		jp iy
+		jp (iy)
 WriteLitD0:	ld a,#D0
-		jp iy
+		jp (iy)
 WriteLitD1:	ld a,#D1
-		jp iy
+		jp (iy)
 WriteLitD2:	ld a,#D2
-		jp iy
+		jp (iy)
 WriteLitD3:	ld a,#D3
-		jp iy
+		jp (iy)
 WriteLitD4:	ld a,#D4
-		jp iy
+		jp (iy)
 WriteLitD5:	ld a,#D5
-		jp iy
+		jp (iy)
 WriteLitD6:	ld a,#D6
-		jp iy
+		jp (iy)
 WriteLitD7:	ld a,#D7
-		jp iy
+		jp (iy)
 WriteLitD8:	ld a,#D8
-		jp iy
+		jp (iy)
 WriteLitD9:	ld a,#D9
-		jp iy
+		jp (iy)
 WriteLitDA:	ld a,#DA
-		jp iy
+		jp (iy)
 WriteLitDB:	ld a,#DB
-		jp iy
+		jp (iy)
 WriteLitDC:	ld a,#DC
-		jp iy
+		jp (iy)
 WriteLitDD:	ld a,#DD
-		jp iy
+		jp (iy)
 WriteLitDE:	ld a,#DE
-		jp iy
+		jp (iy)
 WriteLitDF:	ld a,#DF
-		jp iy
+		jp (iy)
 WriteLitE0:	ld a,#E0
-		jp iy
+		jp (iy)
 WriteLitE1:	ld a,#E1
-		jp iy
+		jp (iy)
 WriteLitE2:	ld a,#E2
-		jp iy
+		jp (iy)
 WriteLitE3:	ld a,#E3
-		jp iy
+		jp (iy)
 WriteLitE4:	ld a,#E4
-		jp iy
+		jp (iy)
 WriteLitE5:	ld a,#E5
-		jp iy
+		jp (iy)
 WriteLitE6:	ld a,#E6
-		jp iy
+		jp (iy)
 WriteLitE7:	ld a,#E7
-		jp iy
+		jp (iy)
 WriteLitE8:	ld a,#E8
-		jp iy
+		jp (iy)
 WriteLitE9:	ld a,#E9
-		jp iy
+		jp (iy)
 WriteLitEA:	ld a,#EA
-		jp iy
+		jp (iy)
 WriteLitEB:	ld a,#EB
-		jp iy
+		jp (iy)
 WriteLitEC:	ld a,#EC
-		jp iy
+		jp (iy)
 WriteLitED:	ld a,#ED
-		jp iy
+		jp (iy)
 WriteLitEE:	ld a,#EE
-		jp iy
+		jp (iy)
 WriteLitEF:	ld a,#EF
-		jp iy
+		jp (iy)
 WriteLitF0:	ld a,#F0
-		jp iy
+		jp (iy)
 WriteLitF1:	ld a,#F1
-		jp iy
+		jp (iy)
 WriteLitF2:	ld a,#F2
-		jp iy
+		jp (iy)
 WriteLitF3:	ld a,#F3
-		jp iy
+		jp (iy)
 WriteLitF4:	ld a,#F4
-		jp iy
+		jp (iy)
 WriteLitF5:	ld a,#F5
-		jp iy
+		jp (iy)
 WriteLitF6:	ld a,#F6
-		jp iy
+		jp (iy)
 WriteLitF7:	ld a,#F7
-		jp iy
+		jp (iy)
 WriteLitF8:	ld a,#F8
-		jp iy
+		jp (iy)
 WriteLitF9:	ld a,#F9
-		jp iy
+		jp (iy)
 WriteLitFA:	ld a,#FA
-		jp iy
+		jp (iy)
 WriteLitFB:	ld a,#FB
-		jp iy
+		jp (iy)
 WriteLitFC:	ld a,#FC
-		jp iy
+		jp (iy)
 WriteLitFD:	ld a,#FD
-		jp iy
+		jp (iy)
 WriteLitFE:	ld a,#FE
-		jp iy
+		jp (iy)
 WriteLitFF:	ld a,#FF
-		jp iy
+		jp (iy)
 
 WriteLitLen00:	equ WriteLit01 - WriteLit00	; special case for 00
 WriteLitLen:	equ WriteLit02 - WriteLit01	; all other cases
@@ -2315,16 +2315,16 @@ CopyDist16:	call Read7Bits
 		push hl
 		exx
 		ld e,a
-		ld d,257 - 1 >> 8
+		ld d,(257 - 1) / 256
 		jp Copy_AndNext
 CopyDist16Len:	equ $ - CopyDist16
 
 CopyDist17:	call Read7Bits
 		push hl
 		exx
-		add a,385 - 1 & 0FFH
+		add a,(385 - 1) & #FF
 		ld e,a
-		ld d,385 - 1 >> 8
+		ld d,(385 - 1) / 256
 		jp Copy_AndNext
 CopyDist17Len:	equ $ - CopyDist17
 
@@ -2332,7 +2332,7 @@ CopyDist18:	call Read8Bits
 		push hl
 		exx
 		ld e,a
-		ld d,513 - 1 >> 8
+		ld d,(513 - 1) / 256
 		jp Copy_AndNext
 CopyDist18Len:	equ $ - CopyDist18
 
@@ -2340,77 +2340,77 @@ CopyDist19:	call Read8Bits
 		push hl
 		exx
 		ld e,a
-		ld d,769 - 1 >> 8
+		ld d,(769 - 1) / 256
 		jp Copy_AndNext
 CopyDist19Len:	equ $ - CopyDist19
 
 CopyDist20:	call Read8Bits
 		ex af,af'
 		call Read1Bit
-		add a,1025 - 1 >> 8
+		add a,(1025 - 1) / 256
 		jp CopyBigDist
 CopyDist20Len:	equ $ - CopyDist20
 
 CopyDist21:	call Read8Bits
 		ex af,af'
 		call Read1Bit
-		add a,1537 - 1 >> 8
+		add a,(1537 - 1) / 256
 		jp CopyBigDist
 CopyDist21Len:	equ $ - CopyDist21
 
 CopyDist22:	call Read8Bits
 		ex af,af'
 		call Read2Bits
-		add a,2049 - 1 >> 8
+		add a,(2049 - 1) / 256
 		jp CopyBigDist
 CopyDist22Len:	equ $ - CopyDist22
 
 CopyDist23:	call Read8Bits
 		ex af,af'
 		call Read2Bits
-		add a,3073 - 1 >> 8
+		add a,(3073 - 1) / 256
 		jp CopyBigDist
 CopyDist23Len:	equ $ - CopyDist23
 
 CopyDist24:	call Read8Bits
 		ex af,af'
 		call Read3Bits
-		add a,4097 - 1 >> 8
+		add a,(4097 - 1) / 256
 		jp CopyBigDist
 CopyDist24Len:	equ $ - CopyDist24
 
 CopyDist25:	call Read8Bits
 		ex af,af'
 		call Read3Bits
-		add a,6145 - 1 >> 8
+		add a,(6145 - 1) / 256
 		jp CopyBigDist
 CopyDist25Len:	equ $ - CopyDist25
 
 CopyDist26:	call Read8Bits
 		ex af,af'
 		call Read4Bits
-		add a,8193 - 1 >> 8
+		add a,(8193 - 1) / 256
 		jp CopyBigDist
 CopyDist26Len:	equ $ - CopyDist26
 
 CopyDist27:	call Read8Bits
 		ex af,af'
 		call Read4Bits
-		add a,12289 - 1 >> 8
+		add a,(12289 - 1) / 256
 		jp CopyBigDist
 CopyDist27Len:	equ $ - CopyDist27
 
 CopyDist28:	call Read8Bits
 		ex af,af'
 		call Read5Bits
-		add a,16385 - 1 >> 8
+		add a,(16385 - 1) / 256
 		jp CopyBigDist
 CopyDist28Len:	equ $ - CopyDist28
 
 CopyDist29:	call Read8Bits
 		ex af,af'
 		call Read5Bits
-		add a,24577 - 1 >> 8
+		add a,(24577 - 1) / 256
 		jp CopyBigDist
 CopyDist29Len:	equ $ - CopyDist29
 
@@ -2472,7 +2472,7 @@ ReadByte:	ld a,(de)
 		push af
 		inc d
 		ld a,d
-		cp InputBufferEnd >> 8
+		cp InputBufferEnd / 256
 		jr z,NextBlock	; end of input buffer reached?
 		pop af
 		ret
@@ -2663,7 +2663,7 @@ Write_AndNext:	ld (hl),a
 
 		inc h
 		ld a,h
-		cp OutputBufEnd >> 8
+		cp OutputBufEnd / 256
 		jp nz,LiteralTree	; end of buffer reached?
 
 		ld (OutputBufPos),hl	; OutputBufEnd
@@ -2685,9 +2685,9 @@ Copy_AndNext:	pop hl   ; hl = OutputBufPos
 		pop de
 		ld a,h
 		jr c,CopyWrap
-		cp OutputBuffer >> 8
+		cp OutputBuffer / 256
 		jr c,CopyWrap
-WrapContinue:	ld a,(OutputBufEnd >> 8) - 3
+WrapContinue:	ld a,(OutputBufEnd / 256) - 3
 		cp h  ; does the source have a 512 byte margin without wrapping?
 		jr c,CopySlow
 		cp d  ; does the destination a 512 byte margin without wrapping?
@@ -2701,7 +2701,7 @@ WrapContinue:	ld a,(OutputBufEnd >> 8) - 3
 		pop hl	; updated OutputBufPos
 		jp LiteralTree
 
-CopyWrap:	add a,OutputBufSize >> 8
+CopyWrap:	add a,OutputBufSize / 256
 		ld h,a
 		jp WrapContinue
 
@@ -2715,7 +2715,7 @@ CopySlow:	ld (OutputBufPos),de
 		add hl,bc
 		jr c,CopySplit
 		ld a,h
-		cp OutputBufEnd >> 8
+		cp OutputBufEnd / 256
 		jp c,WrBlk_AndNext
 ; hl = end address
 CopySplit:	push bc
@@ -2752,7 +2752,7 @@ WriteBlock:	ld hl,(OutputBufPos)
 		add hl,bc
 		jr c,CopySplit2
 		ld a,h
-		cp OutputBufEnd >> 8
+		cp OutputBufEnd / 256
 		jr nc,CopySplit2
 		and a
 		sbc hl,bc
@@ -2793,7 +2793,7 @@ WriteByte:	ld (hl),a
 
 		inc h
 		ld a,h
-		cp OutputBufEnd >> 8
+		cp OutputBufEnd / 256
 		ret nz		; end of buffer reached?
 
 		ld (OutputBufPos),hl	; OutputBufEnd
@@ -2851,7 +2851,7 @@ CRC32Loop:	ld a,(hl)
 		exx
 		xor e
 		ld l,a
-		ld h,CRC32Table >> 8
+		ld h,CRC32Table / 256
 		ld a,(hl)
 		xor d
 		ld e,a
@@ -3267,7 +3267,7 @@ DistanceTreeEnd:equ DistanceTree + DistTreeSize
 ; These must be aligned at 256-byte boundary. OutputBuffer must be exactly
 ; 32kB. InputBuffer must be (any) multiple of 256 bytes, but bigger improves
 ; read performance.
-Padding		equ (256 - (DistanceTreeEnd & 255)) & 255
+Padding		equ (256 - ((DistanceTreeEnd) & 255)) & 255
 
 OutputBufSize:	equ #8000	; _must_ be exactly 32kB
 OutputBuffer:	equ DistanceTreeEnd + Padding
