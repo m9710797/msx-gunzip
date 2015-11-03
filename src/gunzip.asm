@@ -120,11 +120,17 @@ ParseOption:	inc de
 		and %11011111  ; upper-case
 		cp "Q"
 		jr z,OptionQuiet
+		cp "F"
+		jr z,OptionFast
 OptionError:	ld hl,TextOptionErr
 		jp ExitWithError
 
-OptionQuiet:	ld (Quiet),a	; any non-zero value
-		inc de
+OptionQuiet:	ld (Quiet),a		; any non-zero value
+		jr OptionNext
+
+OptionFast:	ld (NoCrcCheck),a	; any non-zero value
+
+OptionNext:	inc de
 		ld a,(de)
 		and a
 		ret z
@@ -279,14 +285,18 @@ SizeError	ld hl,TextSizeError
 		jp nz,ExitWithError
 
 ; Verify CRC
-		ld de,(Crc32Value + 2)	; de = actual crc bits 31-16
 		pop hl			; hl = expected crc bits 31-16
+		pop de			; de = expected crc bits 15-0
+		ld a,(NoCrcCheck)
+		or a
+		ret nz
+		ld bc,(Crc32Value + 2)	; de = actual crc bits 31-16
 		scf
-		adc hl,de
+		adc hl,bc
 		jr nz,CrcError
-		ld de,(Crc32Value + 0)	; de = actual crc bits 15-0
-		pop hl			; hl = expected crc bits 15-0
-		adc hl,de
+		ex de,hl
+		ld bc,(Crc32Value + 0)	; de = actual crc bits 15-0
+		adc hl,bc
 CrcError:	ld hl,TextCrcError
 		jp nz,ExitWithError
 		ret
@@ -2816,6 +2826,9 @@ FinishBlock:	push bc
 SkipInc64:
 
 ; Update CRC32
+		ld a,(NoCrcCheck)
+		or a
+		jr nz,SkipCrcUpdate
 		ld hl,OutputBuffer
 		pop bc		; bc = #bytes in OutputBuffer
 		push bc
@@ -2861,6 +2874,7 @@ CRC32Loop:	ld a,(hl)
 		pop de
 		pop bc
 		exx
+SkipCrcUpdate:
 
 ; check for CTRL-C
 		ld c,#0B	; _CONST
@@ -2981,6 +2995,7 @@ HeaderFlags:	db 0
 InputPath:	dw 0	; zero-terminated string to input filename
 OutputPath:	dw 0	; zero terminated string to output filename (optional)
 Quiet:		db 0	; non-zero when running in 'quite' mode
+NoCrcCheck:     db 0	; non-zero when running without crc check
 
 ; -- Used during building the dynamic alphabet --
 ; Strictly speaking we only need to store the LSB of the following two values.
@@ -3018,7 +3033,8 @@ TextNoMemory:	db "Insufficient TPA space.", 13, 10, 0
 TextUsage:	db "Usage: gunzip [options] <archive.gz> <outputfile>", 13, 10
 		db 13, 10
 		db "Options:", 13, 10
-		db "  /q  Quiet mode, suppress messages.", 13, 10
+		db "  /q  Quiet, suppress messages.", 13, 10
+		db "  /f  Fast, no checksum validation.", 13, 10
 		db 13, 10
 		db "If no output file is specified, the archive will be tested.", 13, 10, 0
 TextNotGzip:	db "Not a GZIP file.", 13, 10, 0
