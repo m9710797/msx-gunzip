@@ -2469,7 +2469,7 @@ FinishRead:	ld (InputBufPos),de
 ReadByte:	ld a,(de)
 		inc e
 		ret nz		; crosses 256-byte boundary?
-		push af
+ReadByte2:	push af
 		inc d
 		ld a,d
 		cp InputBufferEnd / 256
@@ -2509,7 +2509,10 @@ ReadBitInlineA:	MACRO
 		ENDM
 
 ; 'outline' part of ReadBitInlineA
-ReadBitA:	call ReadByte
+ReadBitA:	;call ReadByte ; partially inline this call
+		ld a,(de)
+		inc e
+		call z,ReadByte2
 		scf  ; set sentinel bit
 		rra
 		ld c,a
@@ -2524,7 +2527,10 @@ ReadBitInlineB: MACRO
 
 ; 'outline' part of ReadBitInlineB
 ReadBitB:	ld b,a
-		call ReadByte
+		;call ReadByte ; partially inline this call
+		ld a,(de)
+		inc e
+		call z,ReadByte2
 		scf  ; set sentinel bit
 		rra
 		ld c,a
