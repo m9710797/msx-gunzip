@@ -354,14 +354,16 @@ Uncompressed:	ld de,(InputBufPos)
 		inc b
 		ld c,b
 		ld b,a
+
 		ld hl,(OutputBufPos)
 UncompLoop:	call ReadByte
 		call WriteByte
 		djnz UncompLoop
 		dec c
 		jr nz,UncompLoop
-UncompEnd:	ld (OutputBufPos),hl
-		ld (InputBufPos),de
+		ld (OutputBufPos),hl
+
+UncompEnd:	ld (InputBufPos),de
 		ret
 
 
