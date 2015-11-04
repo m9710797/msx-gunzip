@@ -2229,205 +2229,209 @@ DistSymbols:	db CopyDist0Len
 ; Distance alphabet symbols 0-29
 CopyDist0:	push hl
 		exx
-		ld de,1 - 1
+		ld hl,-1
 		jp Copy_AndNext
 CopyDist0Len:	equ $ - CopyDist0
 
 CopyDist1:	push hl
 		exx
-		ld de,2 - 1
+		ld hl,-2
 		jp Copy_AndNext
 CopyDist1Len:	equ $ - CopyDist1
 
 CopyDist2:	push hl
 		exx
-		ld de,3 - 1
+		ld hl,-3
 		jp Copy_AndNext
 CopyDist2Len:	equ $ - CopyDist2
 
 CopyDist3:	push hl
 		exx
-		ld de,4 - 1
+		ld hl,-4
 		jp Copy_AndNext
 CopyDist3Len:	equ $ - CopyDist3
 
 CopyDist4:	call Read1Bit
-		add a,5 - 1
+		xor -5	; -5..-6
 		jp CopySmallDist
 CopyDist4Len:	equ $ - CopyDist4
 
 CopyDist5:	call Read1Bit
-		add a,7 - 1
+		xor -7	; -7..-8
 		jp CopySmallDist
 CopyDist5Len:	equ $ - CopyDist5
 
 CopyDist6:	call Read2Bits
-		add a,9 - 1
+		xor -9	; -9..-12
 		jp CopySmallDist
 CopyDist6Len:	equ $ - CopyDist6
 
 CopyDist7:	call Read2Bits
-		add a,13 - 1
+		xor -13	; -13..-16
 		jp CopySmallDist
 CopyDist7Len:	equ $ - CopyDist7
 
 CopyDist8:	call Read3Bits
-		add a,17 - 1
+		xor -17	; -17..-24
 		jp CopySmallDist
 CopyDist8Len:	equ $ - CopyDist8
 
 CopyDist9:	call Read3Bits
-		add a,25 - 1
+		xor -25	; -25..-32
 		jp CopySmallDist
 CopyDist9Len:	equ $ - CopyDist9
 
 CopyDist10:	call Read4Bits
-		add a,33 - 1
+		xor -33	; -33..-48
 		jp CopySmallDist
 CopyDist10Len:	equ $ - CopyDist10
 
 CopyDist11:	call Read4Bits
-		add a,49 - 1
+		xor -49	; -49..-64
 		jp CopySmallDist
 CopyDist11Len:	equ $ - CopyDist11
 
 CopyDist12:	call Read5Bits
-		add a,65 - 1
+		xor -65	; -64..-96
 		jp CopySmallDist
 CopyDist12Len:	equ $ - CopyDist12
 
 CopyDist13:	call Read5Bits
-		add a,97 - 1
+		xor -97	; -97..-128
 		jp CopySmallDist
 CopyDist13Len:	equ $ - CopyDist13
 
 CopyDist14:	call Read6Bits
-		add a,129 - 1
+		xor -129	; -129..-192
 		jp CopySmallDist
 CopyDist14Len:	equ $ - CopyDist14
 
 CopyDist15:	call Read6Bits
-		add a,193 - 1
+		xor -193	; -193..-256
 		jp CopySmallDist
 CopyDist15Len:	equ $ - CopyDist15
 
 CopyDist16:	call Read7Bits
 		push hl
 		exx
-		ld e,a
-		ld d,(257 - 1) / 256
+		cpl
+		ld l,a
+		ld h,-257 >> 8	; -257..-384
 		jp Copy_AndNext
 CopyDist16Len:	equ $ - CopyDist16
 
 CopyDist17:	call Read7Bits
 		push hl
 		exx
-		add a,(385 - 1) & #FF
-		ld e,a
-		ld d,(385 - 1) / 256
+		xor -385 & #FF
+		ld l,a
+		ld h,-385 >> 8	; -385..-512
 		jp Copy_AndNext
 CopyDist17Len:	equ $ - CopyDist17
 
 CopyDist18:	call Read8Bits
 		push hl
 		exx
-		ld e,a
-		ld d,(513 - 1) / 256
+		cpl
+		ld l,a
+		ld h,-513 >> 8	; -513..-768
 		jp Copy_AndNext
 CopyDist18Len:	equ $ - CopyDist18
 
 CopyDist19:	call Read8Bits
 		push hl
 		exx
-		ld e,a
-		ld d,(769 - 1) / 256
+		cpl
+		ld l,a
+		ld h,-769 >> 8	; -769..-1024
 		jp Copy_AndNext
 CopyDist19Len:	equ $ - CopyDist19
 
 CopyDist20:	call Read8Bits
 		ex af,af'
 		call Read1Bit
-		add a,(1025 - 1) / 256
+		xor -1025 >> 8	; -1025..-1536
 		jp CopyBigDist
 CopyDist20Len:	equ $ - CopyDist20
 
 CopyDist21:	call Read8Bits
 		ex af,af'
 		call Read1Bit
-		add a,(1537 - 1) / 256
+		xor -1537 >> 8	; -1537..-2048
 		jp CopyBigDist
 CopyDist21Len:	equ $ - CopyDist21
 
 CopyDist22:	call Read8Bits
 		ex af,af'
 		call Read2Bits
-		add a,(2049 - 1) / 256
+		xor -2049 >> 8	; -2049..-3072
 		jp CopyBigDist
 CopyDist22Len:	equ $ - CopyDist22
 
 CopyDist23:	call Read8Bits
 		ex af,af'
 		call Read2Bits
-		add a,(3073 - 1) / 256
+		xor -3073 >> 8	; -3073..-4096
 		jp CopyBigDist
 CopyDist23Len:	equ $ - CopyDist23
 
 CopyDist24:	call Read8Bits
 		ex af,af'
 		call Read3Bits
-		add a,(4097 - 1) / 256
+		xor -4097 >> 8	; -4097..-6144
 		jp CopyBigDist
 CopyDist24Len:	equ $ - CopyDist24
 
 CopyDist25:	call Read8Bits
 		ex af,af'
 		call Read3Bits
-		add a,(6145 - 1) / 256
+		xor -6145 >> 8	; -6145..-8192
 		jp CopyBigDist
 CopyDist25Len:	equ $ - CopyDist25
 
 CopyDist26:	call Read8Bits
 		ex af,af'
 		call Read4Bits
-		add a,(8193 - 1) / 256
+		xor -8193 >> 8	; -8193..-12288
 		jp CopyBigDist
 CopyDist26Len:	equ $ - CopyDist26
 
 CopyDist27:	call Read8Bits
 		ex af,af'
 		call Read4Bits
-		add a,(12289 - 1) / 256
+		xor -12289 >> 8	; -12289..-16364
 		jp CopyBigDist
 CopyDist27Len:	equ $ - CopyDist27
 
 CopyDist28:	call Read8Bits
 		ex af,af'
 		call Read5Bits
-		add a,(16385 - 1) / 256
+		xor -16385 >> 8	; -16385..-24576
 		jp CopyBigDist
 CopyDist28Len:	equ $ - CopyDist28
 
 CopyDist29:	call Read8Bits
 		ex af,af'
 		call Read5Bits
-		add a,(24577 - 1) / 256
+		xor -24577 >> 8	; -24577..-32768
 		jp CopyBigDist
 CopyDist29Len:	equ $ - CopyDist29
 
-; a = distance - 1
+; a = -distance
 CopySmallDist:	push hl
 		exx
-		ld e,a
-		ld d,0
+		ld l,a
+		ld h,#ff
 		jp Copy_AndNext
 
-; a  = MSB(distance - 1)
-; a' = LSB(distance - 1)
+; a  = MSB( -distance)
+; a' = LSB(~-distance)
 CopyBigDist:	push hl
 		exx
-		ld d,a
+		ld h,a
 		ex af,af'
-		ld e,a
+		cpl
+		ld l,a
 		jp Copy_AndNext
 
 
@@ -2680,23 +2684,19 @@ Write_AndNext:	ld (hl),a
 ; Repeat (copy) a chunk of data that was written before.
 ; Like 'Write_AndNext' above, this routine is very tightly coupled to the
 ; huffman decode routines. It does not return, instead it jumps to LiteralTree.
-; (top-of-stack) = OutputBufPos (in/out)
+; (top-of-stack) = OutputBufPos
 ; bc = byte count (range 3-258)
-; de = distance - 1
+; hl = -distance
+; hl <- new OutputBufPos
 ; Modifies: (after exx) af, bc', de', hl'
-Copy_AndNext:	pop hl   ; hl = OutputBufPos
-		push hl
-		scf
-		sbc hl,de
-		pop de
+Copy_AndNext:	pop de		; de = destination = OutputBufPos
+		add hl,de	; hl = source
 		ld a,h
-		jr c,CopyWrap
+		jr nc,CopyWrap
 		cp OutputBuffer / 256
 		jr c,CopyWrap
-WrapContinue:	ld a,(OutputBufEnd / 256) - 3
-		cp h  ; does the source have a 512 byte margin without wrapping?
-		jr c,CopySlow
-		cp d  ; does the destination a 512 byte margin without wrapping?
+		ld a,(OutputBufEnd / 256) - 3
+WrapContinue:	cp d  ; does the destination a 512 byte margin without wrapping?
 		jr c,CopySlow
 		ldi
 		ldi
@@ -2709,7 +2709,9 @@ WrapContinue:	ld a,(OutputBufEnd / 256) - 3
 
 CopyWrap:	add a,OutputBufSize / 256
 		ld h,a
-		jp WrapContinue
+		ld a,(OutputBufEnd / 256) - 3	; only check source when it wrapped
+		cp h	; does the source have a 512 byte margin without wrapping?
+		jp nc,WrapContinue
 
 ; bc = byte count
 ; hl = buffer source
