@@ -355,8 +355,14 @@ Uncompressed:	ld de,(InputBufPos)
 		ld b,a
 
 		ld hl,(OutputBufPos)
-UncompLoop:	call ReadByte
-		call WriteByte
+UncompLoop:	;call ReadByte	; partially inline this call
+		ld a,(de)
+		inc e
+		call z,ReadByte2
+		;call WriteByte	; partially inline this call
+		ld (hl),a
+		inc l
+		call z,WriteByte2
 		djnz UncompLoop
 		dec c
 		jr nz,UncompLoop
@@ -2801,11 +2807,11 @@ CopySplit2:	push bc
 
 ; a = value
 ; de,bc <- unchanged
-WriteByte:	ld (hl),a
-		inc l
-		ret nz		; crosses 256-byte boundary?
+;WriteByte:	ld (hl),a
+;		inc l
+;		ret nz		; crosses 256-byte boundary?
 
-		inc h
+WriteByte2:	inc h
 		ld a,h
 		cp OutputBufEnd / 256
 		ret nz		; end of buffer reached?
