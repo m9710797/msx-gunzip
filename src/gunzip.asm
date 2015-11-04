@@ -234,7 +234,7 @@ NoSkipExtra:
 
 ; Decompress all blocks in the gz file
 InflateLoop:	call PrepareRead
-		call Read1Bit
+		ReadBitInlineA
 		push af
 		call Read2Bits
 		push af
@@ -242,8 +242,7 @@ InflateLoop:	call PrepareRead
 		pop af
 		call InflateBlock
 		pop af
-		or a
-		jr z,InflateLoop
+		jr nc,InflateLoop
 
 ; Finish last (partially filled) OutputBuffer (update count, crc)
 		call FinishBlock
@@ -2036,103 +2035,111 @@ CopyLen7:	exx
 		jp DistanceTree
 CopyLen7Len:	equ $ - CopyLen7
 
-CopyLen8:	call Read1Bit
-		add a,11
+CopyLen8:	ReadBitInlineA	; set c-flag
+		sbc a,a		; carry ? -1 :  0
+		cpl		; carry ?  0 : -1
+		add a,11 + 1	; carry ? 12 : 11
 		jp CopySetLength
 CopyLen8Len:	equ $ - CopyLen8
 
-CopyLen9:	call Read1Bit
-		add a,13
+CopyLen9:	ReadBitInlineA
+		sbc a,a
+		cpl
+		add a,13 + 1	; 13..14
 		jp CopySetLength
 CopyLen9Len:	equ $ - CopyLen9
 
-CopyLen10:	call Read1Bit
-		add a,15
+CopyLen10:	ReadBitInlineA
+		sbc a,a
+		cpl
+		add a,15 + 1	; 15..16
 		jp CopySetLength
 CopyLen10Len:	equ $ - CopyLen10
 
-CopyLen11:	call Read1Bit
-		add a,17
+CopyLen11:	ReadBitInlineA
+		sbc a,a
+		cpl
+		add a,17 + 1	; 17..18
 		jp CopySetLength
 CopyLen11Len:	equ $ - CopyLen11
 
 CopyLen12:	call Read2Bits
-		add a,19
+		add a,19	; 19..22
 		jp CopySetLength
 CopyLen12Len:	equ $ - CopyLen12
 
 CopyLen13:	call Read2Bits
-		add a,23
+		add a,23	; 23..26
 		jp CopySetLength
 CopyLen13Len:	equ $ - CopyLen13
 
 CopyLen14:	call Read2Bits
-		add a,27
+		add a,27	; 27..30
 		jp CopySetLength
 CopyLen14Len:	equ $ - CopyLen14
 
 CopyLen15:	call Read2Bits
-		add a,31
+		add a,31	; 31..34
 		jp CopySetLength
 CopyLen15Len:	equ $ - CopyLen15
 
 CopyLen16:	call Read3Bits
-		add a,35
+		add a,35	; 35..42
 		jp CopySetLength
 CopyLen16Len:	equ $ - CopyLen16
 
 CopyLen17:	call Read3Bits
-		add a,43
+		add a,43	; 43..50
 		jp CopySetLength
 CopyLen17Len:	equ $ - CopyLen17
 
 CopyLen18:	call Read3Bits
-		add a,51
+		add a,51	; 51..58
 		jp CopySetLength
 CopyLen18Len:	equ $ - CopyLen18
 
 CopyLen19:	call Read3Bits
-		add a,59
+		add a,59	; 59..66
 		jp CopySetLength
 CopyLen19Len:	equ $ - CopyLen19
 
 CopyLen20:	call Read4Bits
-		add a,67
+		add a,67	; 67..82
 		jp CopySetLength
 CopyLen20Len:	equ $ - CopyLen20
 
 CopyLen21:	call Read4Bits
-		add a,83
+		add a,83	; 83..98
 		jp CopySetLength
 CopyLen21Len:	equ $ - CopyLen21
 
 CopyLen22:	call Read4Bits
-		add a,99
+		add a,99	; 99..114
 		jp CopySetLength
 CopyLen22Len:	equ $ - CopyLen22
 
 CopyLen23:	call Read4Bits
-		add a,115
+		add a,115	; 115..130
 		jp CopySetLength
 CopyLen23Len:	equ $ - CopyLen23
 
 CopyLen24:	call Read5Bits
-		add a,131
+		add a,131	; 131..162
 		jp CopySetLength
 CopyLen24Len:	equ $ - CopyLen24
 
 CopyLen25:	call Read5Bits
-		add a,163
+		add a,163	; 163..194
 		jp CopySetLength
 CopyLen25Len:	equ $ - CopyLen25
 
 CopyLen26:	call Read5Bits
-		add a,195
+		add a,195	; 195..226
 		jp CopySetLength
 CopyLen26Len:	equ $ - CopyLen26
 
 CopyLen27:	call Read5Bits
-		add a,227
+		add a,227	; 227..257
 		exx
 		ld c,a
 		jp nc,CopySetLength0
@@ -2251,13 +2258,15 @@ CopyDist3:	push hl
 		jp Copy_AndNext
 CopyDist3Len:	equ $ - CopyDist3
 
-CopyDist4:	call Read1Bit
-		xor -5	; -5..-6
+CopyDist4:	ReadBitInlineA	; set c-flag
+		sbc a,a		; carry ? -1 :  0
+		sub 5		; carry ? -6 : -5
 		jp CopySmallDist
 CopyDist4Len:	equ $ - CopyDist4
 
-CopyDist5:	call Read1Bit
-		xor -7	; -7..-8
+CopyDist5:	ReadBitInlineA
+		sbc a,a
+		sub 7	; -7..-8
 		jp CopySmallDist
 CopyDist5Len:	equ $ - CopyDist5
 
@@ -2349,15 +2358,17 @@ CopyDist19Len:	equ $ - CopyDist19
 
 CopyDist20:	call Read8Bits
 		ex af,af'
-		call Read1Bit
-		xor -1025 >> 8	; -1025..-1536
+		ReadBitInlineA
+		sbc a,a
+		sub 5		; -5/-6 -> -1025..-1536
 		jp CopyBigDist
 CopyDist20Len:	equ $ - CopyDist20
 
 CopyDist21:	call Read8Bits
 		ex af,af'
-		call Read1Bit
-		xor -1537 >> 8	; -1537..-2048
+		ReadBitInlineA
+		sbc a,a
+		sub 7		; -7/-8 -> -1537..-2048
 		jp CopyBigDist
 CopyDist21Len:	equ $ - CopyDist21
 
@@ -2541,16 +2552,11 @@ ReadBitB:	ld b,a
 		ld a,b
 		ret
 
-; Routines to read {1..8} bits from the input.
+; Routines to read {2..8} bits from the input.
 ; Requires: PrepareRead has been called (registers C and DE are reserved)
 ; a <- value
 ; Modifies: b
 ; Unchanged: hl, ix, iy
-Read1Bit:	xor a
-		ReadBitInlineB
-		rla
-		ret
-
 Read2Bits:	xor a
 		ReadBitInlineB
 		rra
