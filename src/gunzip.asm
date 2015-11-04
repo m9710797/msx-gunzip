@@ -2041,31 +2041,27 @@ CopyLen7:	exx
 		jp DistanceTree
 CopyLen7Len:	equ $ - CopyLen7
 
-CopyLen8:	ReadBitInlineA	; set c-flag
-		sbc a,a		; carry ? -1 :  0
-		cpl		; carry ?  0 : -1
-		add a,11 + 1	; carry ? 12 : 11
+CopyLen8:	ReadBitInlineA
+		ld a,0
+		adc a,11	; 11..12
 		jp CopySetLength
 CopyLen8Len:	equ $ - CopyLen8
 
 CopyLen9:	ReadBitInlineA
-		sbc a,a
-		cpl
-		add a,13 + 1	; 13..14
+		ld a,0
+		adc a,13	; 13..14
 		jp CopySetLength
 CopyLen9Len:	equ $ - CopyLen9
 
 CopyLen10:	ReadBitInlineA
-		sbc a,a
-		cpl
-		add a,15 + 1	; 15..16
+		ld a,0
+		adc a,15	; 15..16
 		jp CopySetLength
 CopyLen10Len:	equ $ - CopyLen10
 
 CopyLen11:	ReadBitInlineA
-		sbc a,a
-		cpl
-		add a,17 + 1	; 17..18
+		ld a,0
+		adc a,17	; 17..18
 		jp CopySetLength
 CopyLen11Len:	equ $ - CopyLen11
 
