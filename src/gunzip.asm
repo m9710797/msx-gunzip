@@ -8,7 +8,7 @@
 		ld c,a
 		ld d,a
 		ld e,a
-		ld c,6FH	; _DOSVER
+		ld c,#6F	; _DOSVER
 		call #0005	; BDOS
 		ld hl,TextNeedDos2
 		add a,-1
@@ -2529,8 +2529,13 @@ ReadBitInlineA:	MACRO
 ReadBitA:	;call ReadByte ; partially inline this call
 		ld a,(de)
 		inc e
-		call z,ReadByte2
-		scf  ; set sentinel bit
+		jr z,ReadBitA2
+		scf	; set sentinel bit
+		rra
+		ld c,a
+		ret
+ReadBitA2:	call ReadByte2
+		scf	; set sentinel bit
 		rra
 		ld c,a
 		ret
@@ -2547,8 +2552,14 @@ ReadBitB:	ld b,a
 		;call ReadByte ; partially inline this call
 		ld a,(de)
 		inc e
-		call z,ReadByte2
-		scf  ; set sentinel bit
+		jr z,ReadBitB2
+		scf	; set sentinel bit
+		rra
+		ld c,a
+		ld a,b
+		ret
+ReadBitB2	call ReadByte2
+		scf	; set sentinel bit
 		rra
 		ld c,a
 		ld a,b
