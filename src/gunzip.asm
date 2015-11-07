@@ -386,7 +386,7 @@ FixedComp:	ld bc,FixedLitCount
 
 		ld bc,FixedDistCount
 		ld de,FixedDistLen
-		ld hl,DistanceTree + 1
+		ld hl,DistanceTree
 		ld iy,DistSymbols
 		call GenerateHuffman
 		ld hl,DistanceTreeEnd	;; Sanity check
@@ -398,9 +398,7 @@ FixedComp:	ld bc,FixedLitCount
 
 ; A block compressed using a dynamic alphabet
 DynamicComp:	call BuildDynAlpha
-DoInflate:	ld a,#D9		; opcode for EXX
-		ld (DistanceTree),a
-		ld iy,Write_AndNext
+DoInflate:	ld iy,Write_AndNext
 		call PrepareRead
 		ld hl,(OutputBufPos)
 		call LiteralTree
@@ -500,7 +498,7 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 		ld de,(hlit)
 		add hl,de
 		ex de,hl		; de = length of symbols
-		ld hl,DistanceTree + 1
+		ld hl,DistanceTree
 		ld iy,DistSymbols	; iy = distance symbol handlers table
 		call GenerateHuffman
 		ld hl,DistanceTreeEnd	;;
@@ -2001,43 +1999,35 @@ EndBlockLen:	equ $ - EndBlock
 
 
 ; Literal/length alphabet symbols 257-285
-CopyLen0:	exx
-		ld bc,3
+CopyLen0:	ld ix,Copy_AndNext3
 		jp DistanceTree
 CopyLen0Len:	equ $ - CopyLen0
 
-CopyLen1:	exx
-		ld bc,4
+CopyLen1:	ld ix,Copy_AndNext4
 		jp DistanceTree
 CopyLen1Len:	equ $ - CopyLen1
 
-CopyLen2:	exx
-		ld bc,5
+CopyLen2:	ld ix,Copy_AndNext5
 		jp DistanceTree
 CopyLen2Len:	equ $ - CopyLen2
 
-CopyLen3:	exx
-		ld bc,6
+CopyLen3:	ld ix,Copy_AndNext6
 		jp DistanceTree
 CopyLen3Len:	equ $ - CopyLen3
 
-CopyLen4:	exx
-		ld bc,7
+CopyLen4:	ld ix,Copy_AndNext7
 		jp DistanceTree
 CopyLen4Len:	equ $ - CopyLen4
 
-CopyLen5:	exx
-		ld bc,8
+CopyLen5:	ld ix,Copy_AndNext8
 		jp DistanceTree
 CopyLen5Len:	equ $ - CopyLen5
 
-CopyLen6:	exx
-		ld bc,9
+CopyLen6:	ld ix,Copy_AndNext9
 		jp DistanceTree
 CopyLen6Len:	equ $ - CopyLen6
 
-CopyLen7:	exx
-		ld bc,10
+CopyLen7:	ld ix,Copy_AndNext10
 		jp DistanceTree
 CopyLen7Len:	equ $ - CopyLen7
 
@@ -2146,11 +2136,12 @@ CopyLen27:	call Read5Bits
 		ld c,a
 		jp nc,CopySetLength0
 		ld b,1
+		ld ix,Copy_AndNext
+		exx
 		jp DistanceTree
 CopyLen27Len:	equ $ - CopyLen27
 
-CopyLen28:	exx
-		ld bc,258
+CopyLen28:	ld ix,Copy_AndNext258
 		jp DistanceTree
 CopyLen28Len:	equ $ - CopyLen28
 
@@ -2158,6 +2149,8 @@ CopyLen28Len:	equ $ - CopyLen28
 CopySetLength:	exx
 		ld c,a
 CopySetLength0:	ld b,0
+		ld ix,Copy_AndNext
+		exx
 		jp DistanceTree
 
 
@@ -2239,25 +2232,25 @@ DistSymbols:	db CopyDist0Len
 CopyDist0:	push hl
 		exx
 		ld hl,-1
-		jp Copy_AndNext
+		jp ix
 CopyDist0Len:	equ $ - CopyDist0
 
 CopyDist1:	push hl
 		exx
 		ld hl,-2
-		jp Copy_AndNext
+		jp ix
 CopyDist1Len:	equ $ - CopyDist1
 
 CopyDist2:	push hl
 		exx
 		ld hl,-3
-		jp Copy_AndNext
+		jp ix
 CopyDist2Len:	equ $ - CopyDist2
 
 CopyDist3:	push hl
 		exx
 		ld hl,-4
-		jp Copy_AndNext
+		jp ix
 CopyDist3Len:	equ $ - CopyDist3
 
 CopyDist4:	ReadBitInlineA	; set c-flag
@@ -2328,7 +2321,7 @@ CopyDist16:	call Read7Bits
 		cpl
 		ld l,a
 		ld h,-257 >> 8	; -257..-384
-		jp Copy_AndNext
+		jp ix
 CopyDist16Len:	equ $ - CopyDist16
 
 CopyDist17:	call Read7Bits
@@ -2337,7 +2330,7 @@ CopyDist17:	call Read7Bits
 		xor -385 & #FF
 		ld l,a
 		ld h,-385 >> 8	; -385..-512
-		jp Copy_AndNext
+		jp ix
 CopyDist17Len:	equ $ - CopyDist17
 
 CopyDist18:	call Read8Bits
@@ -2346,7 +2339,7 @@ CopyDist18:	call Read8Bits
 		cpl
 		ld l,a
 		ld h,-513 >> 8	; -513..-768
-		jp Copy_AndNext
+		jp ix
 CopyDist18Len:	equ $ - CopyDist18
 
 CopyDist19:	call Read8Bits
@@ -2355,7 +2348,7 @@ CopyDist19:	call Read8Bits
 		cpl
 		ld l,a
 		ld h,-769 >> 8	; -769..-1024
-		jp Copy_AndNext
+		jp ix
 CopyDist19Len:	equ $ - CopyDist19
 
 CopyDist20:	call Read8Bits
@@ -2434,8 +2427,8 @@ CopyDist29Len:	equ $ - CopyDist29
 CopySmallDist:	push hl
 		exx
 		ld l,a
-		ld h,#ff
-		jp Copy_AndNext
+		ld h,#ff	; -1..-256
+		jp ix
 
 ; a  = MSB( -distance)
 ; a' = LSB(~-distance)
@@ -2445,7 +2438,7 @@ CopyBigDist:	push hl
 		ex af,af'
 		cpl
 		ld l,a
-		jp Copy_AndNext
+		jp ix
 
 
 ; -- Routines to read bits and bytes from the GZ file --
@@ -2699,6 +2692,284 @@ Write_AndNext:	ld (hl),a
 		call FinishBlock
 		; hl = OutputBufPos = OutputBuffer
 		jp LiteralTree
+
+;;; TODO
+Copy_AndNext3:	pop de		; de = destination = OutputBufPos
+		add hl,de	; hl = source
+		ld a,h
+		sub OutputBuffer >> 8
+		sub OutputBufSize >> 8
+		jr nc,CopyWrap3
+WrapContinue3	ld a,d
+		cp (OutputBufEnd >> 8) - 1
+		jr nc,CopySlow3
+		ldi
+		ldi
+		ldi
+		push de
+		; and next
+		exx
+		pop hl	; updated OutputBufPos
+		jp LiteralTree
+
+CopyWrap3:	add a,OutputBuffer >> 8
+		ld h,a
+		cp (OutputBufEnd >> 8) - 1	; only check source when it wrapped
+		jr c,WrapContinue3 ; does the source have a 256 byte margin without wrapping?
+CopySlow3	ld bc,3
+		jp CopySlow
+
+;;; TODO
+Copy_AndNext4:	pop de		; de = destination = OutputBufPos
+		add hl,de	; hl = source
+		ld a,h
+		sub OutputBuffer >> 8
+		sub OutputBufSize >> 8
+		jr nc,CopyWrap4
+WrapContinue4	ld a,d
+		cp (OutputBufEnd >> 8) - 1
+		jr nc,CopySlow4
+		ldi
+		ldi
+		ldi
+		ldi
+		push de
+		; and next
+		exx
+		pop hl	; updated OutputBufPos
+		jp LiteralTree
+
+CopyWrap4:	add a,OutputBuffer >> 8
+		ld h,a
+		cp (OutputBufEnd >> 8) - 1	; only check source when it wrapped
+		jr c,WrapContinue4 ; does the source have a 256 byte margin without wrapping?
+CopySlow4	ld bc,4
+		jp CopySlow
+
+;;; TODO
+Copy_AndNext5:	pop de		; de = destination = OutputBufPos
+		add hl,de	; hl = source
+		ld a,h
+		sub OutputBuffer >> 8
+		sub OutputBufSize >> 8
+		jr nc,CopyWrap5
+WrapContinue5	ld a,d
+		cp (OutputBufEnd >> 8) - 1
+		jr nc,CopySlow5
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		push de
+		; and next
+		exx
+		pop hl	; updated OutputBufPos
+		jp LiteralTree
+
+CopyWrap5:	add a,OutputBuffer >> 8
+		ld h,a
+		cp (OutputBufEnd >> 8) - 1	; only check source when it wrapped
+		jr c,WrapContinue5 ; does the source have a 256 byte margin without wrapping?
+CopySlow5	ld bc,5
+		jp CopySlow
+
+;;; TODO
+Copy_AndNext6:	pop de		; de = destination = OutputBufPos
+		add hl,de	; hl = source
+		ld a,h
+		sub OutputBuffer >> 8
+		sub OutputBufSize >> 8
+		jr nc,CopyWrap6
+WrapContinue6	ld a,d
+		cp (OutputBufEnd >> 8) - 1
+		jr nc,CopySlow6
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		push de
+		; and next
+		exx
+		pop hl	; updated OutputBufPos
+		jp LiteralTree
+
+CopyWrap6:	add a,OutputBuffer >> 8
+		ld h,a
+		cp (OutputBufEnd >> 8) - 1	; only check source when it wrapped
+		jr c,WrapContinue6 ; does the source have a 256 byte margin without wrapping?
+CopySlow6	ld bc,6
+		jp CopySlow
+
+;;; TODO
+Copy_AndNext7:	pop de		; de = destination = OutputBufPos
+		add hl,de	; hl = source
+		ld a,h
+		sub OutputBuffer >> 8
+		sub OutputBufSize >> 8
+		jr nc,CopyWrap7
+WrapContinue7	ld a,d
+		cp (OutputBufEnd >> 8) - 1
+		jr nc,CopySlow7
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		push de
+		; and next
+		exx
+		pop hl	; updated OutputBufPos
+		jp LiteralTree
+
+CopyWrap7:	add a,OutputBuffer >> 8
+		ld h,a
+		cp (OutputBufEnd >> 8) - 1	; only check source when it wrapped
+		jr c,WrapContinue7 ; does the source have a 256 byte margin without wrapping?
+CopySlow7	ld bc,7
+		jp CopySlow
+
+;;; TODO
+Copy_AndNext8:	pop de		; de = destination = OutputBufPos
+		add hl,de	; hl = source
+		ld a,h
+		sub OutputBuffer >> 8
+		sub OutputBufSize >> 8
+		jr nc,CopyWrap8
+WrapContinue8	ld a,d
+		cp (OutputBufEnd >> 8) - 1
+		jr nc,CopySlow8
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		push de
+		; and next
+		exx
+		pop hl	; updated OutputBufPos
+		jp LiteralTree
+
+CopyWrap8:	add a,OutputBuffer >> 8
+		ld h,a
+		cp (OutputBufEnd >> 8) - 1	; only check source when it wrapped
+		jr c,WrapContinue8 ; does the source have a 256 byte margin without wrapping?
+CopySlow8	ld bc,8
+		jp CopySlow
+
+;;; TODO
+Copy_AndNext9:	pop de		; de = destination = OutputBufPos
+		add hl,de	; hl = source
+		ld a,h
+		sub OutputBuffer >> 8
+		sub OutputBufSize >> 8
+		jr nc,CopyWrap9
+WrapContinue9	ld a,d
+		cp (OutputBufEnd >> 8) - 1
+		jr nc,CopySlow9
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		push de
+		; and next
+		exx
+		pop hl	; updated OutputBufPos
+		jp LiteralTree
+
+CopyWrap9:	add a,OutputBuffer >> 8
+		ld h,a
+		cp (OutputBufEnd >> 8) - 1	; only check source when it wrapped
+		jr c,WrapContinue9 ; does the source have a 256 byte margin without wrapping?
+CopySlow9	ld bc,9
+		jp CopySlow
+
+;;; TODO
+Copy_AndNext10:	pop de		; de = destination = OutputBufPos
+		add hl,de	; hl = source
+		ld a,h
+		sub OutputBuffer >> 8
+		sub OutputBufSize >> 8
+		jr nc,CopyWrap10
+WrapContinue10	ld a,d
+		cp (OutputBufEnd >> 8) - 1
+		jr nc,CopySlow10
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		push de
+		; and next
+		exx
+		pop hl	; updated OutputBufPos
+		jp LiteralTree
+
+CopyWrap10:	add a,OutputBuffer >> 8
+		ld h,a
+		cp (OutputBufEnd >> 8) - 1	; only check source when it wrapped
+		jr c,WrapContinue10 ; does the source have a 256 byte margin without wrapping?
+CopySlow10	ld bc,10
+		jr CopySlow
+
+;;; TODO
+Copy_AndNext258:ld bc,258
+		pop de		; de = destination = OutputBufPos
+		add hl,de	; hl = source
+		ld a,h
+		sub OutputBuffer >> 8
+		sub OutputBufSize >> 8
+		jr nc,CopyWrap258
+WrapContinue258	ld a,d
+		cp (OutputBufEnd >> 8) - 2
+		jr nc,CopySlow
+		ldi
+		ldi
+Ldi258		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		ldi
+		jp pe,Ldi258
+		push de
+		; and next
+		exx
+		pop hl	; updated OutputBufPos
+		jp LiteralTree
+
+CopyWrap258:	add a,OutputBuffer >> 8
+		ld h,a
+		cp (OutputBufEnd >> 8) - 2	; only check source when it wrapped
+		jr c,WrapContinue258 ; does the source have a 256 byte margin without wrapping?
+		jr CopySlow
 
 ; Repeat (copy) a chunk of data that was written before.
 ; Like 'Write_AndNext' above, this routine is very tightly coupled to the
@@ -3286,7 +3557,7 @@ LiteralTreeSize:equ (8 +  5) * (288 - 1)
 LiteralTree:	equ HeaderTree
 LiteralTreeEnd:	equ LiteralTree + LiteralTreeSize
 
-DistTreeSize:	equ (8 + 12) * (32 - 1) + 1
+DistTreeSize:	equ (8 + 12) * (32 - 1)
 DistanceTree:	equ LiteralTreeEnd
 DistanceTreeEnd:equ DistanceTree + DistTreeSize
 
