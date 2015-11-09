@@ -63,6 +63,37 @@ SkipPrint:
 		call CheckDOSError
 		ld a,b
 		ld (InFileHandle),a
+
+; Read last 4 bytes, these contain decompressed file size
+		; seek to 4 bytes from the end
+		ld a,2		; relative to end of file
+		ld hl,-4
+		ld d,h
+		ld e,h		; de:hl = -4
+		ld c,#4A	; _SEEK
+		push bc
+		call #0005	; BDOS
+		call CheckDOSError
+
+		; read the last 4 bytes
+		ld de,OutputSize
+		ld hl,4
+		pop bc
+		push bc
+		ld c,#48	; _READ
+		call #0005	; BDOS
+		call CheckDOSError
+
+		; seek to start
+		pop bc
+		xor a		; relative to start of file
+		ld h,a
+		ld l,a
+		ld d,a
+		ld e,a		; de:hl = 0
+		call #0005	; BDOS
+		call CheckDOSError
+
 		call FillInBuffer	; fill buffer with initial content
 
 ; Open output file
@@ -76,6 +107,45 @@ SkipPrint:
 		call CheckDOSError
 		ld a,b
 		ld (OutFileHandle),a
+
+; Pre-allocate output file
+		ld de,(OutputSize + 2)
+		ld a,d
+		or e
+		jr z,NoOutputFile	; don't pre-allocate if < 64K
+		ld hl,(OutputSize + 0)
+
+		push bc
+		ld bc,1
+		sbc hl,bc
+		dec c		; bc = 0
+		ex de,hl
+		sbc hl,bc
+		ex de,hl	; de:hl = final file size minus 1
+		pop bc
+		xor a		; relative to start of file
+		ld c,#4A	; _SEEK
+		push bc
+		call #0005	; BDOS
+		call CheckDOSError
+
+		ld hl,1
+		ld d,h
+		ld e,l		; de = 0, don't care which value we write
+		pop bc
+		push bc
+		ld c,#49	; _WRITE
+		call #0005
+		call CheckDOSError
+
+		xor a		; relative to start of file
+		ld h,a
+		ld l,a
+		ld d,a
+		ld e,a		; de:hl = 0
+		pop bc
+		call #0005
+		call CheckDOSError
 NoOutputFile:
 
 		call GzipExtract
@@ -3293,6 +3363,8 @@ InputEof:	db 0		; non-zero when end-of-file reached
 InFileHandle:	db #FF
 InputBufPos:	dw InputBuffer
 InputBits:	db 0		; partially consumed byte, 0 -> start new byte
+
+OutputSize	ds 4		; 32-bit value, last 4 bytes of input file
 
 ; -- Used for writing the output file
 OutputCount:	ds 4		; 32-bit value
