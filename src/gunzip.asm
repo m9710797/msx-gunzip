@@ -673,16 +673,21 @@ Branch1:	ld (iy + 6),e
 		jp BuildBranch
 
 BuildBranchZero:djnz BuildBranch
-Leaf0:		; add leaf
-		inc hl		; symbol length
-		inc hl		; skip handler length   TODO
-		ld a,#C3	; jp
-		ld (de),a
-		inc de
-		ldi
-		inc bc
-		ldi
-		inc bc
+Leaf0:		; add leaf	; b = 0
+		inc hl		; skip symbol length
+		ld a,c
+		push de		; de = destination
+		ld c,(hl)	; bc = length of handler routine
+		inc hl
+		ld e,(hl)
+		inc hl
+		ld d,(hl)
+		inc hl
+		ex (sp),hl	; hl = destination  (sp) = SortedBuffer
+		ex de,hl
+		ldir		; b = 0
+		pop hl
+		ld c,a
 		;jp GetNextSymbol
 
 ; b = bits left
