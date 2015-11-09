@@ -375,25 +375,17 @@ UncompEnd:	ld (InputBufPos),de
 ; A block compressed using the fixed alphabet
 FixedComp:	ld bc,FixedLitCount
 		ld de,FixedLitLen
-		ld hl,LiteralTree
-		ld iy,LLSymbols
+		ld hl,LLSymbols
+		ld iy,LiteralTree
+		ld ix,LiteralTreeEnd
 		call GenerateHuffman
-		ld hl,LiteralTreeEnd	;; Sanity check:
-		ld de,(HuffOutPtr)	;;  is the 'LiteralTree' buffer
-		or a			;;  big enough to hold the
-		sbc hl,de		;;  generated code?
-		call c,ThrowException	;;
 
 		ld bc,FixedDistCount
 		ld de,FixedDistLen
-		ld hl,DistanceTree
-		ld iy,DistSymbols
+		ld hl,DistSymbols
+		ld iy,DistanceTree
+		ld ix,DistanceTreeEnd
 		call GenerateHuffman
-		ld hl,DistanceTreeEnd	;; Sanity check
-		ld de,(HuffOutPtr)	;;
-		or a			;;
-		sbc hl,de		;;
-		call c,ThrowException	;;
 		jr DoInflate
 
 ; A block compressed using a dynamic alphabet
@@ -460,14 +452,10 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 ; Construct header code alphabet
 		ld bc,MAX_HEADER_LEN
 		ld de,HdrCodeLengths	; de = length of symbols
-		ld hl,HeaderTree
-		ld iy,HeaderSymbols
+		ld hl,HeaderSymbols
+		ld iy,HeaderTree
+		ld ix,HeaderTreeEnd
 		call GenerateHuffman
-		ld hl,HeaderTreeEnd	;; Sanity check:
-		ld de,(HuffOutPtr)	;;  is the 'HeaderTree' buffer
-		or a			;;  big enough to hold the
-		sbc hl,de		;;  generated code?
-		call c,ThrowException	;;
 
 ; Read literal length distance code lengths
 		ld bc,(hdist)
@@ -481,16 +469,12 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 		call FinishRead
 
 ; Construct literal length alphabet
-		ld bc,(hlit) ; bc = number of symbols
+		ld bc,(hlit)		; bc = number of symbols
 		ld de,LLDCodeLengths	; de = length of symbols
-		ld hl,LiteralTree
-		ld iy,LLSymbols		; iy = literal/length symbol handlers table
+		ld hl,LLSymbols		; iy = literal/length symbol handlers table
+		ld iy,LiteralTree
+		ld ix,LiteralTreeEnd
 		call GenerateHuffman
-		ld hl,LiteralTreeEnd	;;
-		ld de,(HuffOutPtr)	;;
-		or a			;;
-		sbc hl,de		;;
-		call c,ThrowException	;;
 
 ; Construct distance alphabet
 		ld bc,(hdist)		; bc = number of symbols
@@ -498,15 +482,10 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 		ld de,(hlit)
 		add hl,de
 		ex de,hl		; de = length of symbols
-		ld hl,DistanceTree
-		ld iy,DistSymbols	; iy = distance symbol handlers table
-		call GenerateHuffman
-		ld hl,DistanceTreeEnd	;;
-		ld de,(HuffOutPtr)	;;
-		or a			;;
-		sbc hl,de		;;
-		call c,ThrowException	;;
-		ret
+		ld hl,DistSymbols	; iy = distance symbol handlers table
+		ld iy,DistanceTree
+		ld ix,DistanceTreeEnd
+		jp GenerateHuffman
 
 
 ; -- Generate Huffman decoding function --
@@ -514,211 +493,211 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 ; In:
 ;  [bc] = number of symbols
 ;  [de] = table containing length of each symbol
-;  [hl] = output-buffer (cannot start below 0x100)
-;  [iy] = table containing pointer to leaf-routine for each symbol
+;  [hl] = table containing pointer to leaf-routine for each symbol
+;  [iy] = output-buffer
+;  [ix] = output-buffer-end (only for buffer overflow check)
 ; Out:
 ;  output-buffer filled with decoding function
-;  (HuffRoot)    = start of output-buffer (= input parameter)
-;  (HuffOutPtr) = end   of output-buffer
 ; Modifies:
 ;  - all registers
-;  - variables HuffScratch,HuffRoot,HuffOutPtr,LengthsPtr are changed, but can be
+;  - buffers CountBuffer and SortedBuffer are changed, but can be
 ;    freely used outside this routine. IOW it's all scratch area.
 ; Requires:
-;  HuffScratch must be 256-byte aligned, must be at least 32 bytes in size
+;  CountBuffer must be 256-byte aligned
+
+MAX_CODELENGTH:	equ 16
 
 GenerateHuffman:
-		ld (HuffRoot),hl
-		ld (HuffOutPtr),hl
-		ld (LengthsPtr),de
+		push ix
+		push iy
+		push hl
+		push de
 		push bc
 
-; Clear length-counts table
-		ld hl,HuffScratch
-		ld de,HuffScratch + 1
-		ld bc,(2 * 16) - 1
-		ld (hl),b		; b = 0
+; Generate list of (code-length, symbol-handler) pairs, sorted on code-length
+		; clear CountBuffer
+		ld hl,CountBuffer
+		ld de,CountBuffer + 1
+		ld bc,(2 * MAX_CODELENGTH) - 1
+		ld (hl),b	; b = 0
 		ldir
 
-		pop bc			; bc = number of symbols
+		; count code lengths
+		pop de		; de = number of symbols
+		ld b,e
+		dec de
+		inc d
+		ld c,d		; bc = numSymbols converted into 2 8-bit counters
+		pop de		; de = codeLengths
+		push de
 		push bc
-
-; Count occurrences of each symbol-length
-		ld de,(LengthsPtr)
-		ld h,HuffScratch / 256	; HuffScratch used as 'int16_t countBuf[16]'
-CountLoop:	ld a,(de)		; symbol length
+		ld h,CountBuffer / 256
+CountLoop2:	ld a,(de)
 		inc de
 		add a,a
-		jr z,CountNext
+		jr z,CountNext2
 		ld l,a
-		inc (hl)		; ++countBuf[length]
-		jr nz,CountNext
+		inc (hl)
+		jr nc,CountNext2
 		inc l
 		inc (hl)
-CountNext:	dec bc
-		ld a,b
-		or c
-		jr nz,CountLoop
+CountNext2:	djnz CountLoop2
+		dec c
+		jr nz,CountLoop2
 
-; Calculate next-codes
-; Before this loop 'HuffScratch' contains 'uint16_t countBuf[16]'
-; After  this loop 'HuffScratch' contains 'uint16_t nextCode[16]'
-; IOW 'countBuf' is transformed in-place to 'nextCode'
-		ld a,16
-		ld d,b			; b = 0
-		ld e,b			; de = t = 0
-		ld l,b			; hl = HuffScratch
-NextCodeLoop:	ld c,(hl)
+		; calculate running sum * 4, transform CountBuffer into offsetBuffer
+		ld de,SortedBuffer
+		ld l,c		; c = 0   hl = CountBuffer
+		ld a,MAX_CODELENGTH
+AccumLoop:	ld c,(hl)
 		ld (hl),e
 		inc l
-		ld b,(hl)		; bc = countBuf[i]
-		ld (hl),d		; nextCode[i] = t
+		ld b,(hl)
+		ld (hl),d
 		inc l
 		ex de,hl
 		add hl,bc
-		add hl,hl		; t = (t + countBuf[i]) * 2
+		add hl,bc
+		add hl,bc
+		add hl,bc
 		ex de,hl
 		dec a
-		jr nz,NextCodeLoop
+		jr nz,AccumLoop
+		ex de,hl
+		ld (hl),a	; a = 0  sentinel
 
-		pop bc			; bc = number of symbols
+		; sort
+		pop bc		; bc = numSymbols converted into 2 8-bit counters
+		pop hl		; hl = codeLengths
+		exx
+		pop bc		; bc = symbolHandlers
+		ld h,CountBuffer / 256
+		exx
 
-; Process the next symbol. Add it to the (partially constructed) Huffman tree,
-; following exiting nodes and creating new nodes along the way.
-SymbolLoop:	push bc			; bc = number of remaining symbols
-
-		ld hl,(LengthsPtr)
-		ld c,(hl)		; c = length of symbol
+SortLoop:	ld a,(hl)	; a = length
 		inc hl
-		ld (LengthsPtr),hl	; ++LengthsPtr
-		ld a,c
 		add a,a
-		jp z,NextSymbol
+		exx
+		jr z,SortSkip
 		ld l,a
-		ld h,HuffScratch / 256	; hl = &nextCode[length]
-
 		ld e,(hl)
 		inc l
-		ld d,(hl)		; de = code = nextCode[length]
-		push de
-		pop ix			; ix = code
+		ld d,(hl)	; de = ptr in SortedBuffer
+		rrca
+		ld (de),a	; store length
 		inc de
-		ld (hl),d
+		ld a,(bc)	; copy handler length
+		inc bc
+		ld (de),a
+		inc de
+		ld a,(bc)	; copy ptr to handler
+		inc bc
+		ld (de),a
+		inc de
+		ld a,(bc)
+		inc bc
+		ld (de),a
+		inc de
+		ld (hl),d	; update ptr to SortedBuffer
 		dec l
-		ld (hl),e		; ++nextCode[length]
-
-		ld a,16
-		sub c			; c = symbol length
-		ld b,a			; b is at least 1
-ShiftLoop:	add ix,ix		; carry-flag clear
-		djnz ShiftLoop
-
-		ld hl,(HuffRoot)	; hl = root node
-		ld de,(HuffOutPtr)	; de = location to create new node
-		; assert(carry-flag not set)
-		sbc hl,de		; does update zero flag
-		add hl,de		; does not update zero flag
-		jr nz,Follow		; de == hl?
-		; de == hl == HuffRoot == HuffOutPtr -> only happens for the very first symbol
-
-CreateLoop:	; invariant: hl -> free space in output buffer
-		;            ix -> remaining code bits (MSB aligned)
-		;            c  -> number of remaining bits
-		;            b  -> 0
-; Generate 'ReadBitInlineA'
-		ld (hl),0CBH		; SRL C
-		inc hl
-		ld (hl),39H
-		inc hl
-		ld (hl),0CCH		; CALL Z,nn
-		inc hl
-		ld (hl),(ReadBitA) & #FF
-		inc hl
-		ld (hl),ReadBitA / 256
-		inc hl
-
-; Generate JP NC,0 / JP C,0
-		add ix,ix		; shift code -> output bit to carry
-		sbc a,a			; a = carry ? 0xff : 0x00
-		and 8			; a = carry ? 0x08 : 0x00
-		xor 0DAH		; a = carry ? 0xD2 : 0xDA
-		ld (hl),a		; carry ? JP_NC : JP_C
-		inc hl
-		inc hl			; skip low address byte
-		ld (hl),b		; b = 0   only mark high address byte
-		inc hl
-
-; Next code bit
-		dec c			; --length
-		jr nz,CreateLoop
-
-; Create leaf node. Inline the leaf routine.
-		ld c,(iy + 0)
-		ld b,0			; bc = length
-		ld e,(iy + 1)
-		ld d,(iy + 2)
-		ex de,hl		; hl = routine / de = leaf-node
-		ldir
-		ld (HuffOutPtr),de	; update new output position
-		jr NextSymbol
-
-FollowLoop:	add ix,ix		; shift code -> output bit to carry
-		sbc a,a			; a = carry ? 0xff : 0x00
-		and 8			; a = carry ? 0x08 : 0x00
-		xor 0DAH		; a = carry ? 0xD2 : 0xDA
-		cp (hl)			; compare with conditional-jump opcode
-		inc hl
-		inc hl			; skip to high address byte of JP cc,nn
-		jr nz,FollowCond
-
-; Follow fall-through path
-		inc hl			; fully skip JP cc,nn instruction
-		jr Follow
-
-FollowCond:	ld a,(hl)		; high byte of conditional jump
-		or a			; address already filled-in?
-		jr nz,FollowExisting
-
-; Path does not yet exist
-		ld (hl),d		; de = HuffOutPtr
-		dec hl
-		ld (hl),e		; fill-in address to new node
-		ex de,hl
-		jr CreateLoop		; create that node
-
-FollowExisting:	dec hl
-		ld l,(hl)		; low  address byte
-		ld h,a			; high address byte
-
-Follow:		; invariant: hl = current (existing) Huffman node
-		;	     de = free buffer space (HuffOutPtr)
-		;            ix -> remaining code bits (MSB aligned)
-		;            c  -> number of remaining bits
-		;            b -> 0
-		inc hl
-		inc hl
-		inc hl
-		inc hl
-		inc hl			; skip ReadBitInlineA
+		ld (hl),e
+SortNext	exx
+		djnz SortLoop
 		dec c
-		jr nz,FollowLoop
+		jr nz,SortLoop
 
-; Reached an existing leaf node, fill-in jump-address to symbol-routine
-		inc hl			; skip conditional jump opcode
-		ld a,(iy + 1)
-		ld (hl),a
+		; build tree
+		ld hl,SortedBuffer	; hl = ptr to sorted (code-length, symbol-handler)-pairs 
+		ld bc,1			; b = bits left  c = code length
+		call GetNextSymbol
+		pop de			; de = treeBuffer
+		call BuildBranch
+		pop hl			; hl = treeBufferEnd
+		and a
+		sbc hl,de
+		ret nc
+		jp ThrowException
+
+SortSkip	inc bc
+		inc bc
+		inc bc
+		jr SortNext
+
+; b = bits left
+; c = code length
+; de = tree position
+; hl = sorted (code length, symbol) list pointer
+; iy = current branch
+BuildBranch:
+		push iy
+		ld iyl,e
+		ld iyh,d
+
+		; add branch
+		ex de,hl
+		ld (hl),#CB		; +0  SRL C
 		inc hl
-		ld a,(iy + 2)
-		ld (hl),a
+		ld (hl),#39		; +1
+		inc hl
+		ld (hl),#CC		; +2  CALL Z,nn
+		inc hl
+		ld (hl),(ReadBitA) & #FF; +3
+		inc hl
+		ld (hl),ReadBitA / 256	; +4
+		inc hl
+		ld (hl),#DA		; +5  JP c,nn
+		inc hl
+		inc hl			; +6  skip address
+		inc hl			; +7
+		ex de,hl
 
-NextSymbol:	inc iy
-		inc iy
-		inc iy
-		pop bc			; bc = number of remaining symbols
-		dec bc
-		ld a,b
-		or c
-		jp nz,SymbolLoop
+		call BuildBranchZero
+		call nc,BuildBranchOne
+
+		pop iy
+		inc b
+		ret
+
+BuildBranchOne:	djnz Branch1
+Leaf1:		inc hl		; symbol length
+		inc hl		; skip handler length
+		ld a,(hl)
+		inc hl
+		ld (iy + 6),a
+		ld a,(hl)
+		inc hl
+		ld (iy + 7),a
+		jp GetNextSymbol
+Branch1:	ld (iy + 6),e
+		ld (iy + 7),d
+		jp BuildBranch
+
+BuildBranchZero:djnz BuildBranch
+Leaf0:		; add leaf
+		inc hl		; symbol length
+		inc hl		; skip handler length   TODO
+		ld a,#C3	; jp
+		ld (de),a
+		inc de
+		ldi
+		inc bc
+		ldi
+		inc bc
+		;jp GetNextSymbol
+
+; b = bits left
+; c = code length
+; hl = sorted (code length, symbol) list pointer
+; b, c <- updated
+; f <- c: end reached
+GetNextSymbol:	inc b
+		ld a,(hl)
+		sub c
+		ret z
+		ret c
+		ld c,(hl)
+		add a,b
+		ld b,a
 		ret
 
 
@@ -3304,11 +3283,6 @@ NoCrcCheck:     db 0	; non-zero when running without crc check
 hlit:		dw 256	; MSB fixed at '1'
 hdist:		dw 0	; MSB fixed at '0'
 
-; -- Used during GenerateHuffman --
-HuffRoot:	dw 0
-LengthsPtr:	dw 0
-HuffOutPtr:	dw 0
-
 ; -- Used for reading the input file --
 InputEof:	db 0		; non-zero when end-of-file reached
 InFileHandle:	db #FF
@@ -3577,8 +3551,12 @@ InputBufferEnd:	equ InputBuffer + InputBufSize
 
 ; -- Huffman scratch area --
 ; Used while generating Huffman decoder.  TODO maybe overlap with 'Padding'?
-HuffScratchSize:equ 32
-HuffScratch:	equ InputBufferEnd
-HuffScratchEnd:	equ HuffScratch + HuffScratchSize
+CountBufSize:	equ MAX_CODELENGTH * 2	; must be 256-byte aligned
+CountBuffer:	equ InputBufferEnd
+CountBufEnd:	equ CountBuffer + CountBufSize
 
-MemoryEnd:	equ HuffScratchEnd
+SortedBufSize:	equ 4 * MAX_LIT_LEN + 1
+SortedBuffer:	equ CountBufEnd
+SortedBufEnd:	equ SortedBuffer + SortedBufSize
+
+MemoryEnd:	equ SortedBufEnd
