@@ -2265,6 +2265,7 @@ DistSymbols:	db CopyDist0Len
 ; 'c = bit reader state
 ; 'de = InputBufPos
 ; 'hl = OutputBufPos
+; ix = copy-routine (Copy_AndNext or a specialized version Copy_AndNext<nn>)
 ; iy = Write_AndNext
 
 ; Distance alphabet symbols 0-29
@@ -2482,34 +2483,17 @@ CopyBigDist:	push hl
 
 ; -- Routines to read bits and bytes from the GZ file --
 
-; For speed reasons all the ReadXX functions below require register C and DE
-; to contains certain values (and those functions also update C, DE). This
-; function sets up the correct values in C and DE.
-PrepareRead:	ld a,(InputBits)
-		ld c,a
-		ld de,(InputBufPos)
-		ret
-
-; After you're done calling the ReadXX functions and you want to use regsiters
-; C and DE for other stuff again. They should be written back to memory.
-FinishRead:	ld (InputBufPos),de
-		ld a,c
-		ld (InputBits),a
-		ret
-
-
 ; Read a byte from the input
 ; Requires: regsiter DE contains 'InputBufPos' (in/out)
 ; a <- value
 ; Unchanged: bc, hl, ix, iy
-;  note: Before the fast-path was:
+; Note: Before the fast-path was:
 ;          ld a,(de)
 ;          inc e
 ;          ret nz
-;        This is faster than the current implementation. Though in the places
-;        where performance matters ReadByte is (partially) inlined, and there
-;        this alternative is a tiny bit faster and results in overall simpler
-;        code.
+;   This is faster than the current implementation. Though in the places where
+;   performance matters ReadByte is (partially) inlined, and then this
+;   alternative is a tiny bit faster. It also results in overall simpler code.
 ReadByte:	inc e
 		call z,ReadByte2	; crosses 256-byte boundary?
 		ld a,(de)
@@ -2530,6 +2514,22 @@ ReadByte2:	inc d
 		pop hl
 		pop bc
 		ld de,InputBuffer
+		ret
+
+
+; For speed reasons all the ReadXX functions below require register C and DE
+; to contains certain values (and those functions also update C, DE). This
+; function sets up the correct values in C and DE.
+PrepareRead:	ld a,(InputBits)
+		ld c,a
+		ld de,(InputBufPos)
+		ret
+
+; After you're done calling the ReadXX functions and you want to use regsiters
+; C and DE for other stuff again. They should be written back to memory.
+FinishRead:	ld (InputBufPos),de
+		ld a,c
+		ld (InputBits),a
 		ret
 
 
@@ -2716,8 +2716,7 @@ Write_AndNext:	ld (hl),a
 		cp OutputBufEnd / 256
 		jp nz,LiteralTree	; end of buffer reached?
 
-		ld (OutputBufPos),hl	; OutputBufEnd
-		call FinishBlock
+		call FinishBlock2
 		; hl = OutputBufPos = OutputBuffer
 		jp LiteralTree
 
@@ -3101,9 +3100,9 @@ CopySplit2:	push bc
 		ex de,hl
 		ld de,(OutputBufPos)
 		ldir
-		ld (OutputBufPos),de
 		push hl
-		call FinishBlock
+		ex de,hl	; hl = OutputBufPos
+		call FinishBlock2
 		pop de
 		pop bc
 		ld a,b
@@ -3122,8 +3121,7 @@ WriteByte2:	inc h
 		cp OutputBufEnd / 256
 		ret nz		; end of buffer reached?
 
-		ld (OutputBufPos),hl	; OutputBufEnd
-		;jp FinishBlock
+		jp FinishBlock2
 		; hl = OutputBufPos = OutputBuffer
 
 
@@ -3133,10 +3131,10 @@ WriteByte2:	inc h
 ;  - write the data to disk
 ;  - reinitialize OutputBufPos
 ; hl <- OutputBuffer
-FinishBlock:	push bc
+FinishBlock:	ld hl,(OutputBufPos)
+FinishBlock2:	push bc
 		push de
 
-		ld hl,(OutputBufPos)
 		ld bc,OutputBuffer
 		or a
 		sbc hl,bc	; hl = #bytes in OutputBuffer
