@@ -8,12 +8,11 @@ Project information
 
 Extracts files compressed with the gzip (.gz) format.
 
-Author: Laurens Holst <laurens.nospam@grauw.nl>  
-Site: <https://bitbucket.org/grauw/gunzip>  
-Downloads: <https://bitbucket.org/grauw/gunzip/downloads>  
-Issues: <https://bitbucket.org/grauw/gunzip/issues>  
-Support: <http://www.msx.org/forum/msx-talk/software/gunzip-msx>  
+Original author: Laurens Holst <laurens.nospam@grauw.nl>
+Original site: <https://bitbucket.org/grauw/gunzip>
 License: Simplified BSD License
+
+Heavily modified by me (Wouter Vermaelen).
 
 
 System Requirements
@@ -37,7 +36,7 @@ Usage:
 Options:
 
   * `/q` Quiet mode, suppress messages.
-    
+
     Suppresses the output of informational and warning messages.
     Error messages, however, are always output.
 
@@ -71,5 +70,5 @@ Note that the [glass](https://bitbucket.org/grauw/glass) assembler which is
 embedded in the project requires [Java 7](http://java.com/getjava). To check
 your Java version, invoke the `java -version` command.
 
-Additionally, [Node.js](https://nodejs.org/) is required. Download it from their
-website or install it through your favourite package manager.
+With very minor changes (replace '&' with 'AND' in expressions) the source code
+also compiles with with compass and probably most gen80 compatible assemblers.
