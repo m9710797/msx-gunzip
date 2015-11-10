@@ -36,7 +36,7 @@ StackSize:	equ #0100	; make sure there's room for this much stack
 		ld a,(Quiet)
 		or a
 		ld hl,TextWelcome
-		call z,Print
+		call z,PrintLn
 
 ; Print inflating/testing
 		ld a,(Quiet)
@@ -59,8 +59,7 @@ SkipPrint:
 		ld de,(InputPath)
 		ld a,%00000001  ; read only
 		ld c,#43	; _OPEN
-		call #0005	; BDOS
-		call CheckDOSError
+		call BDOSAndCheck
 		ld a,b
 		ld (InFileHandle),a
 
@@ -72,8 +71,7 @@ SkipPrint:
 		ld e,h		; de:hl = -4
 		ld c,#4A	; _SEEK
 		push bc
-		call #0005	; BDOS
-		call CheckDOSError
+		call BDOSAndCheck
 
 		; read the last 4 bytes
 		ld de,OutputSize
@@ -81,8 +79,7 @@ SkipPrint:
 		pop bc
 		push bc
 		ld c,#48	; _READ
-		call #0005	; BDOS
-		call CheckDOSError
+		call BDOSAndCheck
 
 		; seek to start
 		pop bc
@@ -91,8 +88,7 @@ SkipPrint:
 		ld l,a
 		ld d,a
 		ld e,a		; de:hl = 0
-		call #0005	; BDOS
-		call CheckDOSError
+		call BDOSAndCheck
 
 ; Open output file
 		ld de,(OutputPath)
@@ -101,8 +97,7 @@ SkipPrint:
 		jr z,NoOutputFile
 		ld a,%00000010  ; write only
 		ld bc,0 * 256 + #44 ; _CREATE
-		call #0005	; BDOS
-		call CheckDOSError
+		call BDOSAndCheck
 		ld a,b
 		ld (OutFileHandle),a
 
@@ -124,8 +119,7 @@ SkipPrint:
 		xor a		; relative to start of file
 		ld c,#4A	; _SEEK
 		push bc
-		call #0005	; BDOS
-		call CheckDOSError
+		call BDOSAndCheck
 
 		ld hl,1
 		ld d,h
@@ -133,8 +127,7 @@ SkipPrint:
 		pop bc
 		push bc
 		ld c,#49	; _WRITE
-		call #0005
-		call CheckDOSError
+		call BDOSAndCheck
 
 		xor a		; relative to start of file
 		ld h,a
@@ -142,8 +135,7 @@ SkipPrint:
 		ld d,a
 		ld e,a		; de:hl = 0
 		pop bc
-		call #0005
-		call CheckDOSError
+		call BDOSAndCheck
 NoOutputFile:
 
 		call GzipExtract
@@ -154,16 +146,14 @@ NoOutputFile:
 		inc a
 		jr z,SkipCloseOutput
 		ld c,#45	; _CLOSE
-		call #0005	; BDOS
-		call CheckDOSError
+		call BDOSAndCheck
 SkipCloseOutput:
 
 ; Close input file
 		ld a,(InFileHandle)
 		ld b,a
 		ld c,#45	; _CLOSE
-		call #0005	; BDOS
-		jp CheckDOSError
+		jp BDOSAndCheck
 		; -- done --
 
 
@@ -2539,8 +2529,7 @@ ReadByte2:	inc d
 		ld d,InputBuffer / 256	; e = 0
 		ld hl,InputBufSize
 		ld c,#48	; _READ
-		call #0005	; BDOS
-		call CheckDOSError
+		call BDOSAndCheck
 		pop hl
 		pop bc
 		ld de,InputBuffer
@@ -3230,8 +3219,7 @@ SkipCrcUpdate:
 		inc a
 		jr z,FinishBlockEnd	; only testing (not writing to file)?
 		ld c,#49	; _WRITE
-		call #0005	; BDOS
-		call CheckDOSError
+		call BDOSAndCheck
 
 FinishBlockEnd:	pop de
 		pop bc
@@ -3242,19 +3230,18 @@ FinishBlockEnd:	pop de
 
 ; === Utility functions ===
 
-; a <- DOS error code
-CheckDOSError:	and a
+BDOSAndCheck:	call #0005
+		and a
 		ret z		; 0 -> no error
 		ld b,a
 		ld de,CliBuffer
 		ld c,#66	; _EXPLAIN
 		call #0005	; BDOS
 		ld hl,CliBuffer
-		call PrintLn
-		jr DosExit
+		;jr ExitWithError
 
 ; hl <- message
-ExitWithError:	call Print
+ExitWithError:	call PrintLn
 DosExit:	ld bc,1 * 256 + #62	; _TERM
 		jp #0005		; BDOS
 
@@ -3361,31 +3348,31 @@ OutputBufPos:	dw OutputBuffer
 
 
 ; === strings ===
-TextWelcome:	db "Gunzip 1.0 by Grauw", 13, 10, 10, 0
+TextWelcome:	db "Gunzip 1.0 by Grauw", 10, 0
 TextInflating:	db "Inflating ", 0
 TextTesting:	db "Testing ",0
 TextDotDotDot:	db "..."
 TextCrLf:	db 13, 10, 0
-TextNeedDos2:	db "MSX-DOS 2 is required.",13, 10, 0
-TextNoMemory:	db "Insufficient TPA space.", 13, 10, 0
+TextNeedDos2:	db "MSX-DOS 2 is required.", 0
+TextNoMemory:	db "Insufficient TPA space.", 0
 TextUsage:	db "Usage: gunzip [options] <archive.gz> <outputfile>", 13, 10
 		db 13, 10
 		db "Options:", 13, 10
 		db "  /q  Quiet, suppress messages.", 13, 10
 		db "  /f  Fast, no checksum validation.", 13, 10
 		db 13, 10
-		db "If no output file is specified, the archive will be tested.", 13, 10, 0
-TextNotGzip:	db "Not a GZIP file.", 13, 10, 0
-TextNotDeflate: db "Not compressed with DEFLATE.", 13, 10, 0
-TextUnknownFlag:db "Unknown flag.", 13, 10, 0
-TextSizeError:	db "Inflated size mismatch.", 13, 10, 0
-TextCrcError:	db "Inflated CRC32 mismatch.", 13, 10, 0
+		db "If no output file is specified, the archive will be tested.", 0
+TextNotGzip:	db "Not a GZIP file.", 0
+TextNotDeflate: db "Not compressed with DEFLATE.", 0
+TextUnknownFlag:db "Unknown flag.", 0
+TextSizeError:	db "Inflated size mismatch.", 0
+TextCrcError:	db "Inflated CRC32 mismatch.", 0
 TextException:	db "An exception occurred on address: ", 0
-TextOptionErr:	db "Unknown command line option.", 13, 10, 0
-TextPathErr:	db "Can not specify additional file paths.", 13, 10, 0
+TextOptionErr:	db "Unknown command line option.", 0
+TextPathErr:	db "Can not specify additional file paths.", 0
 TextParameters:	db "PARAMETERS", 0
-TextBlockErr:	db "Invalid block type.", 13, 10, 0
-TextLengthErr:	db "Invalid length.", 13, 10, 0
+TextBlockErr:	db "Invalid block type.", 0
+TextLengthErr:	db "Invalid length.", 0
 
 
 ; === Constant tables ===
