@@ -94,8 +94,6 @@ SkipPrint:
 		call #0005	; BDOS
 		call CheckDOSError
 
-		call FillInBuffer	; fill buffer with initial content
-
 ; Open output file
 		ld de,(OutputPath)
 		ld a,d
@@ -426,9 +424,9 @@ Uncompressed:	ld de,(InputBufPos)
 
 		ld hl,(OutputBufPos)
 UncompLoop:	;call ReadByte	; partially inline this call
-		ld a,(de)
 		inc e
 		call z,ReadByte2
+		ld a,(de)
 		;call WriteByte	; partially inline this call
 		ld (hl),a
 		inc l
@@ -2497,19 +2495,6 @@ CopyBigDist:	push hl
 
 ; -- Routines to read bits and bytes from the GZ file --
 
-; (Re-)fill the input buffer with data from the .gz file
-FillInBuffer:	ld a,(InFileHandle)
-		ld b,a
-		ld de,InputBuffer
-		ld hl,InputBufSize
-		ld c,#48	; _READ
-		call #0005	; BDOS
-		cp #C7		; .EOF
-		jp nz,CheckDOSError
-		ld (InputEof),a	; any non-zero value
-		ret
-
-
 ; For speed reasons all the ReadXX functions below require register C and DE
 ; to contains certain values (and those functions also update C, DE). This
 ; function sets up the correct values in C and DE.
@@ -2530,35 +2515,36 @@ FinishRead:	ld (InputBufPos),de
 ; Requires: regsiter DE contains 'InputBufPos' (in/out)
 ; a <- value
 ; Unchanged: bc, hl, ix, iy
-ReadByte:	ld a,(de)
-		inc e
-		ret nz		; crosses 256-byte boundary?
-ReadByte2:	push af
-		inc d
+;  note: Before the fast-path was:
+;          ld a,(de)
+;          inc e
+;          ret nz
+;        This is faster than the current implementation. Though in the places
+;        where performance matters ReadByte is (partially) inlined, and there
+;        this alternative is a tiny bit faster and results in overall simpler
+;        code.
+ReadByte:	inc e
+		call z,ReadByte2	; crosses 256-byte boundary?
+		ld a,(de)
+		ret
+
+ReadByte2:	inc d
 		ld a,d
 		cp InputBufferEnd / 256
-		jr z,NextBlock	; end of input buffer reached?
-		pop af
-		ret
-
-NextBlock:	push bc
+		ret nz
+		push bc
 		push hl
-		ld a,(InputEof)
-		or a
-		jr nz,EofError
-		call FillInBuffer
+		ld a,(InFileHandle)
+		ld b,a
+		ld d,InputBuffer / 256	; e = 0
+		ld hl,InputBufSize
+		ld c,#48	; _READ
+		call #0005	; BDOS
+		call CheckDOSError
 		pop hl
 		pop bc
-		ld a,(InputEof)
-		or a
 		ld de,InputBuffer
-		jr z,NoTrap
-		ld de,InputBufferEnd - 1 ; Trap on next read
-NoTrap		pop af
 		ret
-
-EofError:	ld hl,TextEofErr
-		call ThrowMessage
 
 
 ; Read a single bit from the input.
@@ -2574,14 +2560,15 @@ ReadBitInlineA:	MACRO
 
 ; 'outline' part of ReadBitInlineA
 ReadBitA:	;call ReadByte ; partially inline this call
-		ld a,(de)
 		inc e
 		jr z,ReadBitA2
+		ld a,(de)
 		scf	; set sentinel bit
 		rra
 		ld c,a
 		ret
 ReadBitA2:	call ReadByte2
+		ld a,(de)
 		scf	; set sentinel bit
 		rra
 		ld c,a
@@ -2597,15 +2584,16 @@ ReadBitInlineB: MACRO
 ; 'outline' part of ReadBitInlineB
 ReadBitB:	ld b,a
 		;call ReadByte ; partially inline this call
-		ld a,(de)
 		inc e
 		jr z,ReadBitB2
+		ld a,(de)
 		scf	; set sentinel bit
 		rra
 		ld c,a
 		ld a,b
 		ret
 ReadBitB2	call ReadByte2
+		ld a,(de)
 		scf	; set sentinel bit
 		rra
 		ld c,a
@@ -3359,9 +3347,8 @@ hlit:		dw 256	; MSB fixed at '1'
 hdist:		dw 0	; MSB fixed at '0'
 
 ; -- Used for reading the input file --
-InputEof:	db 0		; non-zero when end-of-file reached
 InFileHandle:	db #FF
-InputBufPos:	dw InputBuffer
+InputBufPos:	dw InputBufferEnd - 1
 InputBits:	db 0		; partially consumed byte, 0 -> start new byte
 
 OutputSize	ds 4		; 32-bit value, last 4 bytes of input file
@@ -3399,7 +3386,6 @@ TextPathErr:	db "Can not specify additional file paths.", 13, 10, 0
 TextParameters:	db "PARAMETERS", 0
 TextBlockErr:	db "Invalid block type.", 13, 10, 0
 TextLengthErr:	db "Invalid length.", 13, 10, 0
-TextEofErr:	db "Premature end of data.", 13, 10, 0
 
 
 ; === Constant tables ===
