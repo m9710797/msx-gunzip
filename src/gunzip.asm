@@ -108,19 +108,19 @@ SkipPrint:
 		jr z,NoOutputFile	; don't pre-allocate if < 64K
 		ld hl,(OutputSize + 0)
 
-		push bc
-		ld bc,1
-		sbc hl,bc
-		dec c		; bc = 0
-		ex de,hl
-		sbc hl,bc
-		ex de,hl	; de:hl = final file size minus 1
-		pop bc
+; seek to end of output
+		dec hl
+		ld a,h
+		or l
+		jr nz,SkipDec
+		dec de		; de:hl = OutputSize - 1
+SkipDec
 		xor a		; relative to start of file
 		ld c,#4A	; _SEEK
 		push bc
 		call BDOSAndCheck
 
+; write 1 dummy byte, this will allocate all required disk space
 		ld hl,1
 		ld d,h
 		ld e,l		; de = 0, don't care which value we write
@@ -129,6 +129,7 @@ SkipPrint:
 		ld c,#49	; _WRITE
 		call BDOSAndCheck
 
+; seek back to start
 		xor a		; relative to start of file
 		ld h,a
 		ld l,a
