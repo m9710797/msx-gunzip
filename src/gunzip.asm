@@ -890,7 +890,7 @@ HeaderCopyLen:	equ $ - HeaderCopy
 
 ; Header code alphabet symbol 17
 HdrZFill3:	call Read3Bits
-		add a,3
+		add a,3		; 3..10
 		ld b,a
 		xor a
 		jp HeaderFill
@@ -898,7 +898,7 @@ HdrZFill3Len:	equ $-HdrZFill3
 
 ; Header code alphabet symbol 18
 HdrZFill11:	call Read7Bits
-		add a,11
+		add a,11	; 11..138
 		ld b,a
 		xor a
 		jp HeaderFill
@@ -3345,7 +3345,7 @@ OutputBufPos:	dw OutputBuffer
 
 
 ; === strings ===
-TextWelcome:	db "Gunzip 1.0 by Grauw", 10, 0
+TextWelcome:	db "Gunzip 1.1 by Grauw", 10, 0
 TextInflating:	db "Inflating ", 0
 TextTesting:	db "Testing ",0
 TextDotDotDot:	db "..."
