@@ -683,12 +683,10 @@ SortSkip	inc bc
 ; de = tree position
 ; hl = sorted (code length, symbol) list pointer
 ; iy = current branch
-BuildBranch:
-		push iy
+BuildBranch:	push iy
 		ld iyl,e
 		ld iyh,d
-
-		; add branch
+		; generate code for a branch (test 1 bit from the input)
 		ex de,hl
 		ld (hl),#CB		; +0  SRL C
 		inc hl
@@ -702,37 +700,39 @@ BuildBranch:
 		inc hl
 		ld (hl),#DA		; +5  JP c,nn
 		inc hl
-		inc hl			; +6  skip address
+		inc hl			; +6  skip address, filled-in later
 		inc hl			; +7
 		ex de,hl
-
 		call BuildBranchZero
 		call nc,BuildBranchOne
-
 		pop iy
 		inc b
 		ret
 
-BuildBranchOne:	djnz Branch1
+BuildBranchOne:	; fill-in address of 'JP C,nn' instruction
+		djnz Branch1
 Leaf1:		inc hl		; symbol length
 		inc hl		; skip handler length
 		ld a,(hl)
 		inc hl
-		ld (iy + 6),a
+		ld (iy + 6),a	; replace 'nn' with address of symbol handler
 		ld a,(hl)
 		inc hl
 		ld (iy + 7),a
 		jp GetNextSymbol
-Branch1:	ld (iy + 6),e
+Branch1:	ld (iy + 6),e	; replace 'nn' with address of next branch
 		ld (iy + 7),d
 		jp BuildBranch
 
-BuildBranchZero:djnz BuildBranch
-Leaf0:		; add leaf	; b = 0
+BuildBranchZero:; generate some code after the 'JP C,nn' instruction
+		djnz BuildBranch; generate another branch
+Leaf0:		; Generate code to handle a symbol. One possibility is to
+		; generate a JP to the handler routine. Usually these handlers
+		; are small, so instead we inline (=copy) them.
 		inc hl		; skip symbol length
 		ld a,c
 		push de		; de = destination
-		ld c,(hl)	; bc = length of handler routine
+		ld c,(hl)	; b = 0   bc = length of handler routine
 		inc hl
 		ld e,(hl)
 		inc hl
@@ -3014,7 +3014,7 @@ Copy_AndNext:	pop de		; de = destination = OutputBufPos
 		cp OutputBuffer / 256
 		jr c,CopyWrap
 		ld a,(OutputBufEnd / 256) - 3
-WrapContinue:	cp d  ; does the destination a 512 byte margin without wrapping?
+WrapContinue:	cp d  ; does the destination have a 512 byte margin without wrapping?
 		jr c,CopySlow
 		ldi
 		ldi
