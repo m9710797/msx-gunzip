@@ -231,7 +231,7 @@ FLAG_NAME:	equ #08
 FLAG_COMMENT:	equ #10
 FLAG_RESERVED:	equ #20	 ; #E0
 
-		call PrepareRead
+		ld de,(InputBufPos)
 ; Check two signature bytes
 		call ReadByte
 		cp 31  ; gzip signature (1)
@@ -289,7 +289,7 @@ NoSkipExtra:
 		ld hl,2
 		call nz,SkipInputBytes
 
-		call FinishRead
+		ld (InputBufPos),de
 
 ; Decompress all blocks in the gz file
 InflateLoop:	call PrepareRead
@@ -308,7 +308,7 @@ InflateLoop:	call PrepareRead
 
 ; Verify the decompressed data
 ; Read expected values from file
-		call PrepareRead
+		ld de,(InputBufPos)
 		call ReadByte
 		ld l,a	; bits 7-0
 		call ReadByte
@@ -329,7 +329,7 @@ InflateLoop:	call PrepareRead
 		ld l,a	; bits 23-16
 		call ReadByte
 		ld h,a	; hl = expected-size bits 31-16
-		call FinishRead
+		;ld (InputBufPos),de	; not needed anymore
 
 ; Verify size
 		ld de,(OutputCount + 2) ; de = actual size bits 31-16
@@ -355,9 +355,9 @@ SizeError	ld hl,TextSizeError
 		ex de,hl
 		ld bc,(Crc32Value + 0)	; de = actual crc bits 15-0
 		adc hl,bc
+		ret z			; ok
 CrcError:	ld hl,TextCrcError
-		jp nz,ExitWithError
-		ret
+		jp ExitWithError
 
 
 ; Skip zero-terminated string
@@ -452,7 +452,7 @@ DynamicComp:	call BuildDynAlpha
 DoInflate:	ld iy,Write_AndNext
 		call PrepareRead
 		ld hl,(OutputBufPos)
-		call LiteralTree
+		call LiteralTree	; generated code
 		ld (OutputBufPos),hl
 		jp FinishRead
 
@@ -464,35 +464,33 @@ MAX_LIT_LEN:	equ 286	; maximum number of 'literal/length code lengths'
 MAX_DIST_LEN:	equ 30	; maximum number of 'distance code lengths'
 
 BuildDynAlpha:
+; Clear header code lengths
+		ld hl,HdrCodeLengths
+		ld de,HdrCodeLengths + 1
+		ld bc,MAX_HEADER_LEN - 1
+		ld (hl),b ; 0
+		ldir
+
 ; Read hlit
 		call PrepareRead
 		call Read5Bits
 		inc a
 		cp ((MAX_LIT_LEN) & #FF) + 1
 		call nc,ThrowException
-		ld (hlit),a
+		ld (hlit + 0),a
 
 ; Read hdist
 		call Read5Bits
 		inc a
 		cp MAX_DIST_LEN + 1
 		call nc,ThrowException
-		ld (hdist),a
+		ld (hdist + 0),a
 
 ; Read hclen
 		call Read4Bits
 		add a,4
 		cp MAX_HEADER_LEN + 1
 		call nc,ThrowException
-
-; Clear header code lengths
-		exx
-		ld hl,HdrCodeLengths
-		ld de,HdrCodeLengths + 1
-		ld bc,MAX_HEADER_LEN - 1
-		ld (hl),b ; 0
-		ldir
-		exx
 
 ; Read header code lengths
 		ld ixl,a	; hclen
@@ -524,7 +522,7 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 		ld hl,LLDCodeLengths
 		pop de
 		pop bc
-		call HeaderTree		; decode the header
+		call HeaderTree		; decode the header (generated code)
 		call FinishRead
 
 ; Construct literal length alphabet
@@ -548,7 +546,6 @@ DynStore:	ld (iy + 0),a  ; offset is dynamically changed!
 
 
 ; -- Generate Huffman decoding function --
-;
 ; In:
 ;  [bc] = number of symbols
 ;  [de] = table containing length of each symbol
@@ -581,7 +578,7 @@ GenerateHuffman:
 		ld (hl),b	; b = 0
 		ldir
 
-		; count code lengths
+; count code lengths
 		pop de		; de = number of symbols
 		ld b,e
 		dec de
@@ -591,20 +588,20 @@ GenerateHuffman:
 		push de
 		push bc
 		ld h,CountBuffer / 256
-CountLoop2:	ld a,(de)
+CountLoop:	ld a,(de)
 		inc de
 		add a,a
-		jr z,CountNext2
+		jr z,CountNext
 		ld l,a
 		inc (hl)
-		jr nc,CountNext2
+		jr nc,CountNext
 		inc l
 		inc (hl)
-CountNext2:	djnz CountLoop2
+CountNext:	djnz CountLoop
 		dec c
-		jr nz,CountLoop2
+		jr nz,CountLoop
 
-		; calculate running sum * 4, transform CountBuffer into offsetBuffer
+; calculate running sum * 4, transform CountBuffer into OffsetBuffer
 		ld de,SortedBuffer
 		ld l,c		; c = 0   hl = CountBuffer
 		ld a,MAX_CODELENGTH
@@ -625,14 +622,13 @@ AccumLoop:	ld c,(hl)
 		ex de,hl
 		ld (hl),a	; a = 0  sentinel
 
-		; sort
+; sort
 		pop bc		; bc = numSymbols converted into 2 8-bit counters
 		pop hl		; hl = codeLengths
 		exx
 		pop bc		; bc = symbolHandlers
 		ld h,CountBuffer / 256
 		exx
-
 SortLoop:	ld a,(hl)	; a = length
 		inc hl
 		add a,a
@@ -665,9 +661,9 @@ SortNext	exx
 		dec c
 		jr nz,SortLoop
 
-		; build tree
+; build tree
 		ld hl,SortedBuffer	; hl = ptr to sorted (code-length, symbol-handler)-pairs 
-		ld bc,1			; b = bits left  c = code length
+		inc c			; b = 0 = bits left   c = 1 = code length
 		call GetNextSymbol
 		pop de			; de = treeBuffer
 		call BuildBranch
