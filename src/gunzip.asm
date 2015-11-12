@@ -460,7 +460,13 @@ FixedComp:	ld bc,FixedLitCount
 
 ; A block compressed using a dynamic alphabet
 DynamicComp:	call BuildDynAlpha
-DoInflate:	ld iy,Write_AndNext
+DoInflate:	; generate CopySetLength routine in front of DistanceTree
+		ld hl,CopySL
+		ld de,CopySetLength
+		ld bc,CopySLLen
+		ldir
+
+		ld iy,Write_AndNext
 		call PrepareRead
 		ld hl,(OutputBufPos)
 		call LiteralTree	; generated code
@@ -2184,9 +2190,10 @@ CopyLen27:	call Read5Bits
 		add a,227	; 227..257
 		exx
 		ld c,a
-		jp nc,CopySetLength0
-		ld b,1
-		ld ix,Copy_AndNext
+		ld b,0
+		jr nc,CopySetLength0
+		inc b
+CopySetLength0	ld ix,Copy_AndNext
 		exx
 		jp DistanceTree
 CopyLen27Len:	equ $ - CopyLen27
@@ -2196,12 +2203,14 @@ CopyLen28:	ld ix,Copy_AndNext258
 CopyLen28Len:	equ $ - CopyLen28
 
 ; a = length
-CopySetLength:	exx
+;CopySetLength:
+CopySL:		exx
 		ld c,a
-CopySetLength0:	ld b,0
+		ld b,0
 		ld ix,Copy_AndNext
 		exx
-		jp DistanceTree
+		;jp DistanceTree	; this routine is copied in front of DistanceTree
+CopySLLen:	equ $ - CopySL
 
 
 ; -- Symbol routines used by the 'distance' Huffman tree
@@ -2307,63 +2316,111 @@ CopyDist3Len:	equ $ - CopyDist3
 CopyDist4:	ReadBitInlineA	; set c-flag
 		sbc a,a		; carry ? -1 :  0
 		sub 5		; carry ? -6 : -5
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist4Len:	equ $ - CopyDist4
 
 CopyDist5:	ReadBitInlineA
 		sbc a,a
 		sub 7	; -7..-8
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist5Len:	equ $ - CopyDist5
 
 CopyDist6:	call Read2Bits
 		xor -9	; -9..-12
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist6Len:	equ $ - CopyDist6
 
 CopyDist7:	call Read2Bits
 		xor -13	; -13..-16
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist7Len:	equ $ - CopyDist7
 
 CopyDist8:	call Read3Bits
 		xor -17	; -17..-24
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist8Len:	equ $ - CopyDist8
 
 CopyDist9:	call Read3Bits
 		xor -25	; -25..-32
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist9Len:	equ $ - CopyDist9
 
 CopyDist10:	call Read4Bits
 		xor -33	; -33..-48
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist10Len:	equ $ - CopyDist10
 
 CopyDist11:	call Read4Bits
 		xor -49	; -49..-64
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist11Len:	equ $ - CopyDist11
 
 CopyDist12:	call Read5Bits
 		xor -65	; -64..-96
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist12Len:	equ $ - CopyDist12
 
 CopyDist13:	call Read5Bits
 		xor -97	; -97..-128
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist13Len:	equ $ - CopyDist13
 
 CopyDist14:	call Read6Bits
 		xor -129	; -129..-192
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist14Len:	equ $ - CopyDist14
 
 CopyDist15:	call Read6Bits
 		xor -193	; -193..-256
-		jp CopySmallDist
+		push hl
+		exx
+		ld l,a
+		ld h,#ff
+		jp (ix)
 CopyDist15Len:	equ $ - CopyDist15
 
 CopyDist16:	call Read7Bits
@@ -2407,7 +2464,13 @@ CopyDist20:	call Read8Bits
 		ReadBitInlineA
 		sbc a,a
 		sub 5		; -5/-6 -> -1025..-1536
-		jp CopyBigDist
+		push hl
+		exx
+		ld h,a
+		ex af,af'
+		cpl
+		ld l,a
+		jp (ix)
 CopyDist20Len:	equ $ - CopyDist20
 
 CopyDist21:	call Read8Bits
@@ -2415,81 +2478,118 @@ CopyDist21:	call Read8Bits
 		ReadBitInlineA
 		sbc a,a
 		sub 7		; -7/-8 -> -1537..-2048
-		jp CopyBigDist
-CopyDist21Len:	equ $ - CopyDist21
-
-CopyDist22:	call Read8Bits
-		ex af,af'
-		call Read2Bits
-		xor -9	; -2049..-3072
-		jp CopyBigDist
-CopyDist22Len:	equ $ - CopyDist22
-
-CopyDist23:	call Read8Bits
-		ex af,af'
-		call Read2Bits
-		xor -13	; -3073..-4096
-		jp CopyBigDist
-CopyDist23Len:	equ $ - CopyDist23
-
-CopyDist24:	call Read8Bits
-		ex af,af'
-		call Read3Bits
-		xor -17	; -4097..-6144
-		jp CopyBigDist
-CopyDist24Len:	equ $ - CopyDist24
-
-CopyDist25:	call Read8Bits
-		ex af,af'
-		call Read3Bits
-		xor -25	; -6145..-8192
-		jp CopyBigDist
-CopyDist25Len:	equ $ - CopyDist25
-
-CopyDist26:	call Read8Bits
-		ex af,af'
-		call Read4Bits
-		xor -33	; -8193..-12288
-		jp CopyBigDist
-CopyDist26Len:	equ $ - CopyDist26
-
-CopyDist27:	call Read8Bits
-		ex af,af'
-		call Read4Bits
-		xor -49	; -12289..-16364
-		jp CopyBigDist
-CopyDist27Len:	equ $ - CopyDist27
-
-CopyDist28:	call Read8Bits
-		ex af,af'
-		call Read5Bits
-		xor -65	; -16385..-24576
-		jp CopyBigDist
-CopyDist28Len:	equ $ - CopyDist28
-
-CopyDist29:	call Read8Bits
-		ex af,af'
-		call Read5Bits
-		xor -97	; -24577..-32768
-		jp CopyBigDist
-CopyDist29Len:	equ $ - CopyDist29
-
-; a = -distance
-CopySmallDist:	push hl
-		exx
-		ld l,a
-		ld h,#ff	; -1..-256
-		jp (ix)
-
-; a  = MSB( -distance)
-; a' = LSB(~-distance)
-CopyBigDist:	push hl
+		push hl
 		exx
 		ld h,a
 		ex af,af'
 		cpl
 		ld l,a
 		jp (ix)
+CopyDist21Len:	equ $ - CopyDist21
+
+CopyDist22:	call Read8Bits
+		ex af,af'
+		call Read2Bits
+		xor -9	; -2049..-3072
+		push hl
+		exx
+		ld h,a
+		ex af,af'
+		cpl
+		ld l,a
+		jp (ix)
+CopyDist22Len:	equ $ - CopyDist22
+
+CopyDist23:	call Read8Bits
+		ex af,af'
+		call Read2Bits
+		xor -13	; -3073..-4096
+		push hl
+		exx
+		ld h,a
+		ex af,af'
+		cpl
+		ld l,a
+		jp (ix)
+CopyDist23Len:	equ $ - CopyDist23
+
+CopyDist24:	call Read8Bits
+		ex af,af'
+		call Read3Bits
+		xor -17	; -4097..-6144
+		push hl
+		exx
+		ld h,a
+		ex af,af'
+		cpl
+		ld l,a
+		jp (ix)
+CopyDist24Len:	equ $ - CopyDist24
+
+CopyDist25:	call Read8Bits
+		ex af,af'
+		call Read3Bits
+		xor -25	; -6145..-8192
+		push hl
+		exx
+		ld h,a
+		ex af,af'
+		cpl
+		ld l,a
+		jp (ix)
+CopyDist25Len:	equ $ - CopyDist25
+
+CopyDist26:	call Read8Bits
+		ex af,af'
+		call Read4Bits
+		xor -33	; -8193..-12288
+		push hl
+		exx
+		ld h,a
+		ex af,af'
+		cpl
+		ld l,a
+		jp (ix)
+CopyDist26Len:	equ $ - CopyDist26
+
+CopyDist27:	call Read8Bits
+		ex af,af'
+		call Read4Bits
+		xor -49	; -12289..-16364
+		push hl
+		exx
+		ld h,a
+		ex af,af'
+		cpl
+		ld l,a
+		jp (ix)
+CopyDist27Len:	equ $ - CopyDist27
+
+CopyDist28:	call Read8Bits
+		ex af,af'
+		call Read5Bits
+		xor -65	; -16385..-24576
+		push hl
+		exx
+		ld h,a
+		ex af,af'
+		cpl
+		ld l,a
+		jp (ix)
+CopyDist28Len:	equ $ - CopyDist28
+
+CopyDist29:	call Read8Bits
+		ex af,af'
+		call Read5Bits
+		xor -97	; -24577..-32768
+		push hl
+		exx
+		ld h,a
+		ex af,af'
+		cpl
+		ld l,a
+		jp (ix)
+CopyDist29Len:	equ $ - CopyDist29
 
 
 ; -- Routines to read bits and bytes from the GZ file --
@@ -3646,7 +3746,8 @@ LiteralTree:	equ HeaderTree
 LiteralTreeEnd:	equ LiteralTree + LiteralTreeSize
 
 DistTreeSize:	equ (8 + 12) * (32 - 1)
-DistanceTree:	equ LiteralTreeEnd
+CopySetLength:	equ LiteralTreeEnd
+DistanceTree:	equ CopySetLength + CopySLLen
 DistanceTreeEnd:equ DistanceTree + DistTreeSize
 
 ; -- Input and output file buffers
