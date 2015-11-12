@@ -948,7 +948,7 @@ ThrowInlineLen:	equ $ - ThrowInline
 
 ; -- Symbol routines used by the 'literal + copy-length' Huffman tree
 
-LLSymbols:	db WriteLitLen00	; 0
+LLSymbols:	db WriteLitLen	; 0
 		dw WriteLit00
 		db WriteLitLen
 		dw WriteLit01
@@ -1532,521 +1532,520 @@ LLSymbols:	db WriteLitLen00	; 0
 ; iy = Write_AndNext
 
 ; Literal/length alphabet symbols 0-255
-WriteLit00:	xor a		; special case
+WriteLit00:	ld (hl),#00
 		jp (iy)		; Write_AndNext
-WriteLit01:	ld a,#01
+WriteLit01:	ld (hl),#01
 		jp (iy)
-WriteLit02:	ld a,#02
+WriteLit02:	ld (hl),#02
 		jp (iy)
-WriteLit03:	ld a,#03
+WriteLit03:	ld (hl),#03
 		jp (iy)
-WriteLit04:	ld a,#04
+WriteLit04:	ld (hl),#04
 		jp (iy)
-WriteLit05:	ld a,#05
+WriteLit05:	ld (hl),#05
 		jp (iy)
-WriteLit06:	ld a,#06
+WriteLit06:	ld (hl),#06
 		jp (iy)
-WriteLit07:	ld a,#07
+WriteLit07:	ld (hl),#07
 		jp (iy)
-WriteLit08:	ld a,#08
+WriteLit08:	ld (hl),#08
 		jp (iy)
-WriteLit09:	ld a,#09
+WriteLit09:	ld (hl),#09
 		jp (iy)
-WriteLit0A:	ld a,#0A
+WriteLit0A:	ld (hl),#0A
 		jp (iy)
-WriteLit0B:	ld a,#0B
+WriteLit0B:	ld (hl),#0B
 		jp (iy)
-WriteLit0C:	ld a,#0C
+WriteLit0C:	ld (hl),#0C
 		jp (iy)
-WriteLit0D:	ld a,#0D
+WriteLit0D:	ld (hl),#0D
 		jp (iy)
-WriteLit0E:	ld a,#0E
+WriteLit0E:	ld (hl),#0E
 		jp (iy)
-WriteLit0F:	ld a,#0F
+WriteLit0F:	ld (hl),#0F
 		jp (iy)
-WriteLit10:	ld a,#10
+WriteLit10:	ld (hl),#10
 		jp (iy)
-WriteLit11:	ld a,#11
+WriteLit11:	ld (hl),#11
 		jp (iy)
-WriteLit12:	ld a,#12
+WriteLit12:	ld (hl),#12
 		jp (iy)
-WriteLit13:	ld a,#13
+WriteLit13:	ld (hl),#13
 		jp (iy)
-WriteLit14:	ld a,#14
+WriteLit14:	ld (hl),#14
 		jp (iy)
-WriteLit15:	ld a,#15
+WriteLit15:	ld (hl),#15
 		jp (iy)
-WriteLit16:	ld a,#16
+WriteLit16:	ld (hl),#16
 		jp (iy)
-WriteLit17:	ld a,#17
+WriteLit17:	ld (hl),#17
 		jp (iy)
-WriteLit18:	ld a,#18
+WriteLit18:	ld (hl),#18
 		jp (iy)
-WriteLit19:	ld a,#19
+WriteLit19:	ld (hl),#19
 		jp (iy)
-WriteLit1A:	ld a,#1A
+WriteLit1A:	ld (hl),#1A
 		jp (iy)
-WriteLit1B:	ld a,#1B
+WriteLit1B:	ld (hl),#1B
 		jp (iy)
-WriteLit1C:	ld a,#1C
+WriteLit1C:	ld (hl),#1C
 		jp (iy)
-WriteLit1D:	ld a,#1D
+WriteLit1D:	ld (hl),#1D
 		jp (iy)
-WriteLit1E:	ld a,#1E
+WriteLit1E:	ld (hl),#1E
 		jp (iy)
-WriteLit1F:	ld a,#1F
+WriteLit1F:	ld (hl),#1F
 		jp (iy)
-WriteLit20:	ld a,#20
+WriteLit20:	ld (hl),#20
 		jp (iy)
-WriteLit21:	ld a,#21
+WriteLit21:	ld (hl),#21
 		jp (iy)
-WriteLit22:	ld a,#22
+WriteLit22:	ld (hl),#22
 		jp (iy)
-WriteLit23:	ld a,#23
+WriteLit23:	ld (hl),#23
 		jp (iy)
-WriteLit24:	ld a,#24
+WriteLit24:	ld (hl),#24
 		jp (iy)
-WriteLit25:	ld a,#25
+WriteLit25:	ld (hl),#25
 		jp (iy)
-WriteLit26:	ld a,#26
+WriteLit26:	ld (hl),#26
 		jp (iy)
-WriteLit27:	ld a,#27
+WriteLit27:	ld (hl),#27
 		jp (iy)
-WriteLit28:	ld a,#28
+WriteLit28:	ld (hl),#28
 		jp (iy)
-WriteLit29:	ld a,#29
+WriteLit29:	ld (hl),#29
 		jp (iy)
-WriteLit2A:	ld a,#2A
+WriteLit2A:	ld (hl),#2A
 		jp (iy)
-WriteLit2B:	ld a,#2B
+WriteLit2B:	ld (hl),#2B
 		jp (iy)
-WriteLit2C:	ld a,#2C
+WriteLit2C:	ld (hl),#2C
 		jp (iy)
-WriteLit2D:	ld a,#2D
+WriteLit2D:	ld (hl),#2D
 		jp (iy)
-WriteLit2E:	ld a,#2E
+WriteLit2E:	ld (hl),#2E
 		jp (iy)
-WriteLit2F:	ld a,#2F
+WriteLit2F:	ld (hl),#2F
 		jp (iy)
-WriteLit30:	ld a,#30
+WriteLit30:	ld (hl),#30
 		jp (iy)
-WriteLit31:	ld a,#31
+WriteLit31:	ld (hl),#31
 		jp (iy)
-WriteLit32:	ld a,#32
+WriteLit32:	ld (hl),#32
 		jp (iy)
-WriteLit33:	ld a,#33
+WriteLit33:	ld (hl),#33
 		jp (iy)
-WriteLit34:	ld a,#34
+WriteLit34:	ld (hl),#34
 		jp (iy)
-WriteLit35:	ld a,#35
+WriteLit35:	ld (hl),#35
 		jp (iy)
-WriteLit36:	ld a,#36
+WriteLit36:	ld (hl),#36
 		jp (iy)
-WriteLit37:	ld a,#37
+WriteLit37:	ld (hl),#37
 		jp (iy)
-WriteLit38:	ld a,#38
+WriteLit38:	ld (hl),#38
 		jp (iy)
-WriteLit39:	ld a,#39
+WriteLit39:	ld (hl),#39
 		jp (iy)
-WriteLit3A:	ld a,#3A
+WriteLit3A:	ld (hl),#3A
 		jp (iy)
-WriteLit3B:	ld a,#3B
+WriteLit3B:	ld (hl),#3B
 		jp (iy)
-WriteLit3C:	ld a,#3C
+WriteLit3C:	ld (hl),#3C
 		jp (iy)
-WriteLit3D:	ld a,#3D
+WriteLit3D:	ld (hl),#3D
 		jp (iy)
-WriteLit3E:	ld a,#3E
+WriteLit3E:	ld (hl),#3E
 		jp (iy)
-WriteLit3F:	ld a,#3F
+WriteLit3F:	ld (hl),#3F
 		jp (iy)
-WriteLit40:	ld a,#40
+WriteLit40:	ld (hl),#40
 		jp (iy)
-WriteLit41:	ld a,#41
+WriteLit41:	ld (hl),#41
 		jp (iy)
-WriteLit42:	ld a,#42
+WriteLit42:	ld (hl),#42
 		jp (iy)
-WriteLit43:	ld a,#43
+WriteLit43:	ld (hl),#43
 		jp (iy)
-WriteLit44:	ld a,#44
+WriteLit44:	ld (hl),#44
 		jp (iy)
-WriteLit45:	ld a,#45
+WriteLit45:	ld (hl),#45
 		jp (iy)
-WriteLit46:	ld a,#46
+WriteLit46:	ld (hl),#46
 		jp (iy)
-WriteLit47:	ld a,#47
+WriteLit47:	ld (hl),#47
 		jp (iy)
-WriteLit48:	ld a,#48
+WriteLit48:	ld (hl),#48
 		jp (iy)
-WriteLit49:	ld a,#49
+WriteLit49:	ld (hl),#49
 		jp (iy)
-WriteLit4A:	ld a,#4A
+WriteLit4A:	ld (hl),#4A
 		jp (iy)
-WriteLit4B:	ld a,#4B
+WriteLit4B:	ld (hl),#4B
 		jp (iy)
-WriteLit4C:	ld a,#4C
+WriteLit4C:	ld (hl),#4C
 		jp (iy)
-WriteLit4D:	ld a,#4D
+WriteLit4D:	ld (hl),#4D
 		jp (iy)
-WriteLit4E:	ld a,#4E
+WriteLit4E:	ld (hl),#4E
 		jp (iy)
-WriteLit4F:	ld a,#4F
+WriteLit4F:	ld (hl),#4F
 		jp (iy)
-WriteLit50:	ld a,#50
+WriteLit50:	ld (hl),#50
 		jp (iy)
-WriteLit51:	ld a,#51
+WriteLit51:	ld (hl),#51
 		jp (iy)
-WriteLit52:	ld a,#52
+WriteLit52:	ld (hl),#52
 		jp (iy)
-WriteLit53:	ld a,#53
+WriteLit53:	ld (hl),#53
 		jp (iy)
-WriteLit54:	ld a,#54
+WriteLit54:	ld (hl),#54
 		jp (iy)
-WriteLit55:	ld a,#55
+WriteLit55:	ld (hl),#55
 		jp (iy)
-WriteLit56:	ld a,#56
+WriteLit56:	ld (hl),#56
 		jp (iy)
-WriteLit57:	ld a,#57
+WriteLit57:	ld (hl),#57
 		jp (iy)
-WriteLit58:	ld a,#58
+WriteLit58:	ld (hl),#58
 		jp (iy)
-WriteLit59:	ld a,#59
+WriteLit59:	ld (hl),#59
 		jp (iy)
-WriteLit5A:	ld a,#5A
+WriteLit5A:	ld (hl),#5A
 		jp (iy)
-WriteLit5B:	ld a,#5B
+WriteLit5B:	ld (hl),#5B
 		jp (iy)
-WriteLit5C:	ld a,#5C
+WriteLit5C:	ld (hl),#5C
 		jp (iy)
-WriteLit5D:	ld a,#5D
+WriteLit5D:	ld (hl),#5D
 		jp (iy)
-WriteLit5E:	ld a,#5E
+WriteLit5E:	ld (hl),#5E
 		jp (iy)
-WriteLit5F:	ld a,#5F
+WriteLit5F:	ld (hl),#5F
 		jp (iy)
-WriteLit60:	ld a,#60
+WriteLit60:	ld (hl),#60
 		jp (iy)
-WriteLit61:	ld a,#61
+WriteLit61:	ld (hl),#61
 		jp (iy)
-WriteLit62:	ld a,#62
+WriteLit62:	ld (hl),#62
 		jp (iy)
-WriteLit63:	ld a,#63
+WriteLit63:	ld (hl),#63
 		jp (iy)
-WriteLit64:	ld a,#64
+WriteLit64:	ld (hl),#64
 		jp (iy)
-WriteLit65:	ld a,#65
+WriteLit65:	ld (hl),#65
 		jp (iy)
-WriteLit66:	ld a,#66
+WriteLit66:	ld (hl),#66
 		jp (iy)
-WriteLit67:	ld a,#67
+WriteLit67:	ld (hl),#67
 		jp (iy)
-WriteLit68:	ld a,#68
+WriteLit68:	ld (hl),#68
 		jp (iy)
-WriteLit69:	ld a,#69
+WriteLit69:	ld (hl),#69
 		jp (iy)
-WriteLit6A:	ld a,#6A
+WriteLit6A:	ld (hl),#6A
 		jp (iy)
-WriteLit6B:	ld a,#6B
+WriteLit6B:	ld (hl),#6B
 		jp (iy)
-WriteLit6C:	ld a,#6C
+WriteLit6C:	ld (hl),#6C
 		jp (iy)
-WriteLit6D:	ld a,#6D
+WriteLit6D:	ld (hl),#6D
 		jp (iy)
-WriteLit6E:	ld a,#6E
+WriteLit6E:	ld (hl),#6E
 		jp (iy)
-WriteLit6F:	ld a,#6F
+WriteLit6F:	ld (hl),#6F
 		jp (iy)
-WriteLit70:	ld a,#70
+WriteLit70:	ld (hl),#70
 		jp (iy)
-WriteLit71:	ld a,#71
+WriteLit71:	ld (hl),#71
 		jp (iy)
-WriteLit72:	ld a,#72
+WriteLit72:	ld (hl),#72
 		jp (iy)
-WriteLit73:	ld a,#73
+WriteLit73:	ld (hl),#73
 		jp (iy)
-WriteLit74:	ld a,#74
+WriteLit74:	ld (hl),#74
 		jp (iy)
-WriteLit75:	ld a,#75
+WriteLit75:	ld (hl),#75
 		jp (iy)
-WriteLit76:	ld a,#76
+WriteLit76:	ld (hl),#76
 		jp (iy)
-WriteLit77:	ld a,#77
+WriteLit77:	ld (hl),#77
 		jp (iy)
-WriteLit78:	ld a,#78
+WriteLit78:	ld (hl),#78
 		jp (iy)
-WriteLit79:	ld a,#79
+WriteLit79:	ld (hl),#79
 		jp (iy)
-WriteLit7A:	ld a,#7A
+WriteLit7A:	ld (hl),#7A
 		jp (iy)
-WriteLit7B:	ld a,#7B
+WriteLit7B:	ld (hl),#7B
 		jp (iy)
-WriteLit7C:	ld a,#7C
+WriteLit7C:	ld (hl),#7C
 		jp (iy)
-WriteLit7D:	ld a,#7D
+WriteLit7D:	ld (hl),#7D
 		jp (iy)
-WriteLit7E:	ld a,#7E
+WriteLit7E:	ld (hl),#7E
 		jp (iy)
-WriteLit7F:	ld a,#7F
+WriteLit7F:	ld (hl),#7F
 		jp (iy)
-WriteLit80:	ld a,#80
+WriteLit80:	ld (hl),#80
 		jp (iy)
-WriteLit81:	ld a,#81
+WriteLit81:	ld (hl),#81
 		jp (iy)
-WriteLit82:	ld a,#82
+WriteLit82:	ld (hl),#82
 		jp (iy)
-WriteLit83:	ld a,#83
+WriteLit83:	ld (hl),#83
 		jp (iy)
-WriteLit84:	ld a,#84
+WriteLit84:	ld (hl),#84
 		jp (iy)
-WriteLit85:	ld a,#85
+WriteLit85:	ld (hl),#85
 		jp (iy)
-WriteLit86:	ld a,#86
+WriteLit86:	ld (hl),#86
 		jp (iy)
-WriteLit87:	ld a,#87
+WriteLit87:	ld (hl),#87
 		jp (iy)
-WriteLit88:	ld a,#88
+WriteLit88:	ld (hl),#88
 		jp (iy)
-WriteLit89:	ld a,#89
+WriteLit89:	ld (hl),#89
 		jp (iy)
-WriteLit8A:	ld a,#8A
+WriteLit8A:	ld (hl),#8A
 		jp (iy)
-WriteLit8B:	ld a,#8B
+WriteLit8B:	ld (hl),#8B
 		jp (iy)
-WriteLit8C:	ld a,#8C
+WriteLit8C:	ld (hl),#8C
 		jp (iy)
-WriteLit8D:	ld a,#8D
+WriteLit8D:	ld (hl),#8D
 		jp (iy)
-WriteLit8E:	ld a,#8E
+WriteLit8E:	ld (hl),#8E
 		jp (iy)
-WriteLit8F:	ld a,#8F
+WriteLit8F:	ld (hl),#8F
 		jp (iy)
-WriteLit90:	ld a,#90
+WriteLit90:	ld (hl),#90
 		jp (iy)
-WriteLit91:	ld a,#91
+WriteLit91:	ld (hl),#91
 		jp (iy)
-WriteLit92:	ld a,#92
+WriteLit92:	ld (hl),#92
 		jp (iy)
-WriteLit93:	ld a,#93
+WriteLit93:	ld (hl),#93
 		jp (iy)
-WriteLit94:	ld a,#94
+WriteLit94:	ld (hl),#94
 		jp (iy)
-WriteLit95:	ld a,#95
+WriteLit95:	ld (hl),#95
 		jp (iy)
-WriteLit96:	ld a,#96
+WriteLit96:	ld (hl),#96
 		jp (iy)
-WriteLit97:	ld a,#97
+WriteLit97:	ld (hl),#97
 		jp (iy)
-WriteLit98:	ld a,#98
+WriteLit98:	ld (hl),#98
 		jp (iy)
-WriteLit99:	ld a,#99
+WriteLit99:	ld (hl),#99
 		jp (iy)
-WriteLit9A:	ld a,#9A
+WriteLit9A:	ld (hl),#9A
 		jp (iy)
-WriteLit9B:	ld a,#9B
+WriteLit9B:	ld (hl),#9B
 		jp (iy)
-WriteLit9C:	ld a,#9C
+WriteLit9C:	ld (hl),#9C
 		jp (iy)
-WriteLit9D:	ld a,#9D
+WriteLit9D:	ld (hl),#9D
 		jp (iy)
-WriteLit9E:	ld a,#9E
+WriteLit9E:	ld (hl),#9E
 		jp (iy)
-WriteLit9F:	ld a,#9F
+WriteLit9F:	ld (hl),#9F
 		jp (iy)
-WriteLitA0:	ld a,#A0
+WriteLitA0:	ld (hl),#A0
 		jp (iy)
-WriteLitA1:	ld a,#A1
+WriteLitA1:	ld (hl),#A1
 		jp (iy)
-WriteLitA2:	ld a,#A2
+WriteLitA2:	ld (hl),#A2
 		jp (iy)
-WriteLitA3:	ld a,#A3
+WriteLitA3:	ld (hl),#A3
 		jp (iy)
-WriteLitA4:	ld a,#A4
+WriteLitA4:	ld (hl),#A4
 		jp (iy)
-WriteLitA5:	ld a,#A5
+WriteLitA5:	ld (hl),#A5
 		jp (iy)
-WriteLitA6:	ld a,#A6
+WriteLitA6:	ld (hl),#A6
 		jp (iy)
-WriteLitA7:	ld a,#A7
+WriteLitA7:	ld (hl),#A7
 		jp (iy)
-WriteLitA8:	ld a,#A8
+WriteLitA8:	ld (hl),#A8
 		jp (iy)
-WriteLitA9:	ld a,#A9
+WriteLitA9:	ld (hl),#A9
 		jp (iy)
-WriteLitAA:	ld a,#AA
+WriteLitAA:	ld (hl),#AA
 		jp (iy)
-WriteLitAB:	ld a,#AB
+WriteLitAB:	ld (hl),#AB
 		jp (iy)
-WriteLitAC:	ld a,#AC
+WriteLitAC:	ld (hl),#AC
 		jp (iy)
-WriteLitAD:	ld a,#AD
+WriteLitAD:	ld (hl),#AD
 		jp (iy)
-WriteLitAE:	ld a,#AE
+WriteLitAE:	ld (hl),#AE
 		jp (iy)
-WriteLitAF:	ld a,#AF
+WriteLitAF:	ld (hl),#AF
 		jp (iy)
-WriteLitB0:	ld a,#B0
+WriteLitB0:	ld (hl),#B0
 		jp (iy)
-WriteLitB1:	ld a,#B1
+WriteLitB1:	ld (hl),#B1
 		jp (iy)
-WriteLitB2:	ld a,#B2
+WriteLitB2:	ld (hl),#B2
 		jp (iy)
-WriteLitB3:	ld a,#B3
+WriteLitB3:	ld (hl),#B3
 		jp (iy)
-WriteLitB4:	ld a,#B4
+WriteLitB4:	ld (hl),#B4
 		jp (iy)
-WriteLitB5:	ld a,#B5
+WriteLitB5:	ld (hl),#B5
 		jp (iy)
-WriteLitB6:	ld a,#B6
+WriteLitB6:	ld (hl),#B6
 		jp (iy)
-WriteLitB7:	ld a,#B7
+WriteLitB7:	ld (hl),#B7
 		jp (iy)
-WriteLitB8:	ld a,#B8
+WriteLitB8:	ld (hl),#B8
 		jp (iy)
-WriteLitB9:	ld a,#B9
+WriteLitB9:	ld (hl),#B9
 		jp (iy)
-WriteLitBA:	ld a,#BA
+WriteLitBA:	ld (hl),#BA
 		jp (iy)
-WriteLitBB:	ld a,#BB
+WriteLitBB:	ld (hl),#BB
 		jp (iy)
-WriteLitBC:	ld a,#BC
+WriteLitBC:	ld (hl),#BC
 		jp (iy)
-WriteLitBD:	ld a,#BD
+WriteLitBD:	ld (hl),#BD
 		jp (iy)
-WriteLitBE:	ld a,#BE
+WriteLitBE:	ld (hl),#BE
 		jp (iy)
-WriteLitBF:	ld a,#BF
+WriteLitBF:	ld (hl),#BF
 		jp (iy)
-WriteLitC0:	ld a,#C0
+WriteLitC0:	ld (hl),#C0
 		jp (iy)
-WriteLitC1:	ld a,#C1
+WriteLitC1:	ld (hl),#C1
 		jp (iy)
-WriteLitC2:	ld a,#C2
+WriteLitC2:	ld (hl),#C2
 		jp (iy)
-WriteLitC3:	ld a,#C3
+WriteLitC3:	ld (hl),#C3
 		jp (iy)
-WriteLitC4:	ld a,#C4
+WriteLitC4:	ld (hl),#C4
 		jp (iy)
-WriteLitC5:	ld a,#C5
+WriteLitC5:	ld (hl),#C5
 		jp (iy)
-WriteLitC6:	ld a,#C6
+WriteLitC6:	ld (hl),#C6
 		jp (iy)
-WriteLitC7:	ld a,#C7
+WriteLitC7:	ld (hl),#C7
 		jp (iy)
-WriteLitC8:	ld a,#C8
+WriteLitC8:	ld (hl),#C8
 		jp (iy)
-WriteLitC9:	ld a,#C9
+WriteLitC9:	ld (hl),#C9
 		jp (iy)
-WriteLitCA:	ld a,#CA
+WriteLitCA:	ld (hl),#CA
 		jp (iy)
-WriteLitCB:	ld a,#CB
+WriteLitCB:	ld (hl),#CB
 		jp (iy)
-WriteLitCC:	ld a,#CC
+WriteLitCC:	ld (hl),#CC
 		jp (iy)
-WriteLitCD:	ld a,#CD
+WriteLitCD:	ld (hl),#CD
 		jp (iy)
-WriteLitCE:	ld a,#CE
+WriteLitCE:	ld (hl),#CE
 		jp (iy)
-WriteLitCF:	ld a,#CF
+WriteLitCF:	ld (hl),#CF
 		jp (iy)
-WriteLitD0:	ld a,#D0
+WriteLitD0:	ld (hl),#D0
 		jp (iy)
-WriteLitD1:	ld a,#D1
+WriteLitD1:	ld (hl),#D1
 		jp (iy)
-WriteLitD2:	ld a,#D2
+WriteLitD2:	ld (hl),#D2
 		jp (iy)
-WriteLitD3:	ld a,#D3
+WriteLitD3:	ld (hl),#D3
 		jp (iy)
-WriteLitD4:	ld a,#D4
+WriteLitD4:	ld (hl),#D4
 		jp (iy)
-WriteLitD5:	ld a,#D5
+WriteLitD5:	ld (hl),#D5
 		jp (iy)
-WriteLitD6:	ld a,#D6
+WriteLitD6:	ld (hl),#D6
 		jp (iy)
-WriteLitD7:	ld a,#D7
+WriteLitD7:	ld (hl),#D7
 		jp (iy)
-WriteLitD8:	ld a,#D8
+WriteLitD8:	ld (hl),#D8
 		jp (iy)
-WriteLitD9:	ld a,#D9
+WriteLitD9:	ld (hl),#D9
 		jp (iy)
-WriteLitDA:	ld a,#DA
+WriteLitDA:	ld (hl),#DA
 		jp (iy)
-WriteLitDB:	ld a,#DB
+WriteLitDB:	ld (hl),#DB
 		jp (iy)
-WriteLitDC:	ld a,#DC
+WriteLitDC:	ld (hl),#DC
 		jp (iy)
-WriteLitDD:	ld a,#DD
+WriteLitDD:	ld (hl),#DD
 		jp (iy)
-WriteLitDE:	ld a,#DE
+WriteLitDE:	ld (hl),#DE
 		jp (iy)
-WriteLitDF:	ld a,#DF
+WriteLitDF:	ld (hl),#DF
 		jp (iy)
-WriteLitE0:	ld a,#E0
+WriteLitE0:	ld (hl),#E0
 		jp (iy)
-WriteLitE1:	ld a,#E1
+WriteLitE1:	ld (hl),#E1
 		jp (iy)
-WriteLitE2:	ld a,#E2
+WriteLitE2:	ld (hl),#E2
 		jp (iy)
-WriteLitE3:	ld a,#E3
+WriteLitE3:	ld (hl),#E3
 		jp (iy)
-WriteLitE4:	ld a,#E4
+WriteLitE4:	ld (hl),#E4
 		jp (iy)
-WriteLitE5:	ld a,#E5
+WriteLitE5:	ld (hl),#E5
 		jp (iy)
-WriteLitE6:	ld a,#E6
+WriteLitE6:	ld (hl),#E6
 		jp (iy)
-WriteLitE7:	ld a,#E7
+WriteLitE7:	ld (hl),#E7
 		jp (iy)
-WriteLitE8:	ld a,#E8
+WriteLitE8:	ld (hl),#E8
 		jp (iy)
-WriteLitE9:	ld a,#E9
+WriteLitE9:	ld (hl),#E9
 		jp (iy)
-WriteLitEA:	ld a,#EA
+WriteLitEA:	ld (hl),#EA
 		jp (iy)
-WriteLitEB:	ld a,#EB
+WriteLitEB:	ld (hl),#EB
 		jp (iy)
-WriteLitEC:	ld a,#EC
+WriteLitEC:	ld (hl),#EC
 		jp (iy)
-WriteLitED:	ld a,#ED
+WriteLitED:	ld (hl),#ED
 		jp (iy)
-WriteLitEE:	ld a,#EE
+WriteLitEE:	ld (hl),#EE
 		jp (iy)
-WriteLitEF:	ld a,#EF
+WriteLitEF:	ld (hl),#EF
 		jp (iy)
-WriteLitF0:	ld a,#F0
+WriteLitF0:	ld (hl),#F0
 		jp (iy)
-WriteLitF1:	ld a,#F1
+WriteLitF1:	ld (hl),#F1
 		jp (iy)
-WriteLitF2:	ld a,#F2
+WriteLitF2:	ld (hl),#F2
 		jp (iy)
-WriteLitF3:	ld a,#F3
+WriteLitF3:	ld (hl),#F3
 		jp (iy)
-WriteLitF4:	ld a,#F4
+WriteLitF4:	ld (hl),#F4
 		jp (iy)
-WriteLitF5:	ld a,#F5
+WriteLitF5:	ld (hl),#F5
 		jp (iy)
-WriteLitF6:	ld a,#F6
+WriteLitF6:	ld (hl),#F6
 		jp (iy)
-WriteLitF7:	ld a,#F7
+WriteLitF7:	ld (hl),#F7
 		jp (iy)
-WriteLitF8:	ld a,#F8
+WriteLitF8:	ld (hl),#F8
 		jp (iy)
-WriteLitF9:	ld a,#F9
+WriteLitF9:	ld (hl),#F9
 		jp (iy)
-WriteLitFA:	ld a,#FA
+WriteLitFA:	ld (hl),#FA
 		jp (iy)
-WriteLitFB:	ld a,#FB
+WriteLitFB:	ld (hl),#FB
 		jp (iy)
-WriteLitFC:	ld a,#FC
+WriteLitFC:	ld (hl),#FC
 		jp (iy)
-WriteLitFD:	ld a,#FD
+WriteLitFD:	ld (hl),#FD
 		jp (iy)
-WriteLitFE:	ld a,#FE
+WriteLitFE:	ld (hl),#FE
 		jp (iy)
-WriteLitFF:	ld a,#FF
+WriteLitFF:	ld (hl),#FF
 		jp (iy)
 
-WriteLitLen00:	equ WriteLit01 - WriteLit00	; special case for 00
-WriteLitLen:	equ WriteLit02 - WriteLit01	; all other cases
+WriteLitLen:	equ WriteLit02 - WriteLit01
 
 
 ; Literal/length alphabet symbol 256
@@ -2807,7 +2806,7 @@ Read8Bits:	ReadBitInlineB
 ; a = value
 ; hl = OutputBufPos (in/out)
 ; Modifies: a
-Write_AndNext:	ld (hl),a
+Write_AndNext:	;ld (hl),a	; write is already done
 		inc l
 		jp nz,LiteralTree	; crosses 256-byte boundary?
 
