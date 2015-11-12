@@ -3138,7 +3138,7 @@ FinishBlock2:	push bc
 		ld bc,OutputBuffer
 		or a
 		sbc hl,bc	; hl = #bytes in OutputBuffer
-		jr z,FinishBlockEnd	; any data present?
+		jp z,FinishBlockEnd	; any data present?
 
 ; Increase count
 		push hl
@@ -3154,7 +3154,7 @@ SkipInc64:
 ; Update CRC32
 		ld a,(NoCrcCheck)
 		or a
-		jr nz,SkipCrcUpdate
+		jp nz,SkipCrcUpdate
 		ld hl,OutputBuffer
 		pop bc		; bc = #bytes in OutputBuffer
 		push bc
@@ -3165,12 +3165,12 @@ SkipInc64:
 		ld de,(Crc32Value + 0)
 		ld bc,(Crc32Value + 2)	; bc:de = old crc value (32-bit)
 		exx
-		ld a,c	; convert 16-bit counter bc to two 8-bit counters in b and c
-		dec bc
-		inc b
-		ld c,b
-		ld b,a
-CRC32Loop:	ld a,(hl)
+
+		; crc loop is unrolled 2x, so handle the case of an odd number
+		; of elements specially
+		bit 0,c
+		jr z,SkipOddCrc
+		ld a,(hl)
 		inc hl
 		exx
 		xor e
@@ -3190,10 +3190,77 @@ CRC32Loop:	ld a,(hl)
 		inc h
 		ld b,(hl)
 		exx
-		djnz CRC32Loop
-		dec c
-		jp nz,CRC32Loop
+
+SkipOddCrc:	srl b
+		rr c	; bc /= 2
+		ld a,b
+		or c
+		jr z,CRC32End
+		ld a,c	; convert 16-bit counter bc to two 8-bit counters in b and c
+		dec bc
+		inc b
+		ld c,b
+		ld b,a
+
+		; Use the Z80 stack as an 'accelerator' to read bytes from a
+		; table -> the 'pop' instruction reads two bytes and increments
+		; the pointer into the table.
+		; Of course this only works when interrupts are disabled.
+		ld (SaveSP),sp
+CRC32Loop2:	di
+		ld sp,hl
+CRC32Loop:	pop hl
+		ld a,l
 		exx
+		xor e
+		ld l,a
+		ld h,CRC32Table / 256
+		ld a,(hl)
+		xor d
+		ld e,a
+		inc h
+		ld a,(hl)
+		xor c
+		ld d,a
+		inc h
+		ld a,(hl)
+		xor b
+		ld c,a
+		inc h
+		ld b,(hl)
+		exx
+
+		ld a,h
+		exx
+		xor e
+		ld l,a
+		ld h,CRC32Table / 256
+		ld a,(hl)
+		xor d
+		ld e,a
+		inc h
+		ld a,(hl)
+		xor c
+		ld d,a
+		inc h
+		ld a,(hl)
+		xor b
+		ld c,a
+		inc h
+		ld b,(hl)
+		exx
+		djnz CRC32Loop
+		; Don't disable interrupts for too long, so briefly enable them
+		; before disabling them again for the next iteration of the
+		; outer loop
+		ld hl,0
+		add hl,sp
+		ei
+		ld sp,(SaveSP)
+		dec c
+		jp nz,CRC32Loop2
+
+CRC32End:	exx
 		ld (Crc32Value + 0),de
 		ld (Crc32Value + 2),bc	; store updated crc value (32-bit)
 		pop hl
@@ -3340,6 +3407,8 @@ OutputCount:	ds 4		; 32-bit value
 Crc32Value:	ds 4,#FF	; 32-bit value
 OutFileHandle:	db #FF		; start with invalid file handle
 OutputBufPos:	dw OutputBuffer
+
+SaveSP:		dw 0
 
 
 ; === strings ===
